@@ -1,0 +1,1330 @@
+
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Revive Pharma</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ─── TOKENS ─────────────────────────────────────────────── */
+/* Layout: sidebar nav + main content, stacked on mobile */
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface2: #f0f2f6;
+  --border: #e2e6ed;
+  --fg: #1a1d23;
+  --fg2: #5a6070;
+  --fg3: #9aa0ae;
+  --accent: #2563eb;
+  --accent-light: #eff4ff;
+  --accent-dim: #93b4f9;
+  --profit: #059669;
+  --profit-bg: #ecfdf5;
+  --business: #7c3aed;
+  --business-bg: #f5f3ff;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --success: #16a34a;
+  --success-bg: #f0fdf4;
+  --paid: #16a34a;
+  --unpaid: #dc2626;
+  --low-stock: #dc2626;
+  --nav-bg: #111827;
+  --nav-fg: #9ca3af;
+  --nav-active: #ffffff;
+  --nav-active-bg: #1f2937;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1117;
+    --surface: #1a1d26;
+    --surface2: #252933;
+    --border: #2e3340;
+    --fg: #e8eaf0;
+    --fg2: #8892a4;
+    --fg3: #556070;
+    --accent: #3b82f6;
+    --accent-light: #1e2a4a;
+    --accent-dim: #6098f8;
+    --profit: #34d399;
+    --profit-bg: #052e20;
+    --business: #a78bfa;
+    --business-bg: #1e1540;
+    --danger: #f87171;
+    --danger-bg: #2a1010;
+    --warning: #fbbf24;
+    --warning-bg: #2a1f05;
+    --success: #4ade80;
+    --success-bg: #052010;
+    --paid: #4ade80;
+    --unpaid: #f87171;
+    --low-stock: #f87171;
+    --nav-bg: #0a0c12;
+    --nav-fg: #6b7280;
+    --nav-active: #f9fafb;
+    --nav-active-bg: #1f2937;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1117; --surface: #1a1d26; --surface2: #252933;
+  --border: #2e3340; --fg: #e8eaf0; --fg2: #8892a4; --fg3: #556070;
+  --accent: #3b82f6; --accent-light: #1e2a4a; --accent-dim: #6098f8;
+  --profit: #34d399; --profit-bg: #052e20; --business: #a78bfa; --business-bg: #1e1540;
+  --danger: #f87171; --danger-bg: #2a1010; --warning: #fbbf24; --warning-bg: #2a1f05;
+  --success: #4ade80; --success-bg: #052010; --paid: #4ade80; --unpaid: #f87171;
+  --low-stock: #f87171; --nav-bg: #0a0c12; --nav-fg: #6b7280;
+  --nav-active: #f9fafb; --nav-active-bg: #1f2937;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* ─── APP SHELL ──────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex: 1;
+  min-height: 100%;
+}
+
+/* ─── SIDEBAR ────────────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  background: var(--nav-bg);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar-logo {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar-logo .logo-mark {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+.sidebar-logo .logo-sub {
+  font-size: 11px;
+  color: var(--nav-fg);
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.nav-section {
+  padding: 12px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--nav-fg);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  margin: 1px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--nav-fg);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  border: none;
+  background: none;
+  width: calc(100% - 16px);
+  text-align: left;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: #d1d5db; }
+.nav-item.active { background: var(--nav-active-bg); color: var(--nav-active); }
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+/* ─── MAIN ───────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.page { display: none; flex-direction: column; flex: 1; }
+.page.active { display: flex; }
+
+.page-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.page-title { font-size: 20px; font-weight: 700; color: var(--fg); letter-spacing: -0.3px; }
+.page-sub { font-size: 13px; color: var(--fg2); margin-top: 2px; }
+
+.page-body {
+  padding: 24px 28px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ─── CARDS / TILES ──────────────────────────────────────── */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.stat-tile .tile-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--fg3);
+  margin-bottom: 8px;
+}
+.stat-tile .tile-val {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  letter-spacing: -0.5px;
+  font-family: 'Inter', sans-serif;
+}
+.stat-tile .tile-val.profit { color: var(--profit); }
+.stat-tile .tile-val.business { color: var(--business); }
+.stat-tile .tile-val.danger { color: var(--danger); }
+.stat-tile .tile-meta { font-size: 12px; color: var(--fg3); margin-top: 4px; }
+
+/* ─── SECTION HEADERS ────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.2px;
+}
+
+/* ─── PHARMA CARDS ───────────────────────────────────────── */
+.pharma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.pharma-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pharma-card:hover { border-color: var(--accent-dim); box-shadow: 0 2px 12px rgba(37,99,235,0.08); }
+.pharma-card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.pharma-name { font-size: 15px; font-weight: 700; color: var(--fg); }
+.pharma-alias { font-size: 11px; color: var(--fg3); margin-top: 2px; }
+.type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.type-badge.profit { background: var(--profit-bg); color: var(--profit); }
+.type-badge.business { background: var(--business-bg); color: var(--business); }
+.pharma-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.pharma-stat-item { }
+.pharma-stat-item .psi-label { font-size: 10px; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.5px; }
+.pharma-stat-item .psi-val { font-size: 14px; font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; font-family: 'Inter', sans-serif; }
+.pharma-stat-item .psi-val.pending { color: var(--unpaid); }
+
+/* ─── TABLES ─────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 13.5px; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--fg3);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface2); }
+.td-mono { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 13px; }
+
+/* ─── STATUS BADGES ──────────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.status-badge.paid { background: var(--success-bg); color: var(--paid); }
+.status-badge.unpaid { background: var(--danger-bg); color: var(--unpaid); }
+.status-badge.low { background: var(--danger-bg); color: var(--low-stock); }
+.status-badge.ok { background: var(--success-bg); color: var(--success); }
+
+/* ─── BUTTONS ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-ghost { background: var(--surface2); color: var(--fg2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--border); }
+.btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(220,38,38,0.2); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ─── FORM ELEMENTS ──────────────────────────────────────── */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--fg2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-control {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--fg);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; min-height: 80px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ─── MODAL ──────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px max(16px, env(safe-area-inset-left, 0px));
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--fg); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+/* ─── FILTER BAR ─────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.filter-bar select.form-control { width: auto; min-width: 160px; }
+
+/* ─── BILL HEADER CARDS ──────────────────────────────────── */
+.bill-header {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.bill-header-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  min-width: 160px;
+}
+.bhc-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--fg3); }
+.bhc-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; font-family: 'Inter', sans-serif; margin-top: 4px; }
+.bhc-val.red { color: var(--danger); }
+.bhc-val.green { color: var(--success); }
+
+/* ─── STOCK PAGE ─────────────────────────────────────────── */
+.stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.stock-product {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stock-product.low-stock { border-color: rgba(220,38,38,0.35); background: var(--danger-bg); }
+.sp-name { font-size: 13px; font-weight: 600; color: var(--fg); }
+.sp-added { font-size: 11px; color: var(--fg3); margin-top: 2px; }
+.sp-qty {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+  text-align: right;
+}
+.sp-qty.low { color: var(--low-stock); }
+.sp-qty.zero { color: var(--fg3); }
+.sp-qty.ok { color: var(--success); }
+
+/* ─── ANALYTICS ──────────────────────────────────────────── */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.analytics-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.analytics-card .ac-title { font-size: 13px; font-weight: 700; color: var(--fg2); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.6px; }
+.business-bar { margin-bottom: 12px; }
+.bb-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--fg2); margin-bottom: 5px; }
+.bb-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.bb-fill { height: 100%; background: var(--business); border-radius: 4px; transition: width 0.6s ease; }
+.bb-meta { font-size: 11px; color: var(--fg3); margin-top: 4px; }
+
+/* ─── EMPTY STATE ────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--fg3);
+}
+.empty-state .es-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-state .es-title { font-size: 15px; font-weight: 600; color: var(--fg2); margin-bottom: 6px; }
+.empty-state .es-sub { font-size: 13px; }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+  .sidebar-logo { display: none; }
+  .nav-section { display: none; }
+  .nav-item { margin: 4px; padding: 8px 12px; white-space: nowrap; border-radius: 6px; }
+  .page-body { padding: 16px max(16px, env(safe-area-inset-left, 0px)); }
+  .page-header { padding: 16px max(16px, env(safe-area-inset-left, 0px)); }
+  .form-row { grid-template-columns: 1fr; }
+  .pharma-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .stat-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ─── UTILS ──────────────────────────────────────────────── */
+.flex-center { display: flex; align-items: center; }
+.gap-8 { gap: 8px; }
+.text-sm { font-size: 12px; color: var(--fg2); }
+.text-xs { font-size: 11px; color: var(--fg3); }
+.fw-600 { font-weight: 600; }
+.pill-divider { width: 1px; height: 16px; background: var(--border); }
+</style>
+
+<!-- ═══ APP ═══════════════════════════════════════════════ -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Revive</div>
+      <div class="logo-sub">Pharma System</div>
+    </div>
+    <div class="nav-section">Menu</div>
+    <button class="nav-item active" data-page="home" onclick="showPage('home')">
+      <span class="nav-icon">🏠</span> Home
+    </button>
+    <button class="nav-item" data-page="billing" onclick="showPage('billing')">
+      <span class="nav-icon">🧾</span> Billing
+    </button>
+    <button class="nav-item" data-page="stock" onclick="showPage('stock')">
+      <span class="nav-icon">📦</span> Stock
+    </button>
+    <button class="nav-item" data-page="analytics" onclick="showPage('analytics')">
+      <span class="nav-icon">📊</span> Analytics
+    </button>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ══ HOME PAGE ══════════════════════════════════════ -->
+    <div class="page active" id="page-home">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Pharma Overview</div>
+          <div class="page-sub">All pharma partners at a glance</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddPharmaModal()">+ Add Pharma</button>
+      </div>
+      <div class="page-body">
+        <div class="stat-row" id="home-stat-row"></div>
+
+        <div class="section-header">
+          <div class="section-title">💼 Business Pharmas</div>
+          <span class="text-xs">Products at 5% — rest builds credit</span>
+        </div>
+        <div class="pharma-grid" id="home-business-grid"></div>
+
+        <div class="section-header" style="margin-top:8px">
+          <div class="section-title">💰 Profit Pharmas</div>
+          <span class="text-xs">Products at 25–35% discount</span>
+        </div>
+        <div class="pharma-grid" id="home-profit-grid"></div>
+      </div>
+    </div>
+
+    <!-- ══ BILLING PAGE ════════════════════════════════════ -->
+    <div class="page" id="page-billing">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Billing</div>
+          <div class="page-sub">Track all pharma invoices</div>
+        </div>
+        <div class="flex-center gap-8">
+          <button class="btn btn-ghost" onclick="openAddPharmaModal()">+ Add Pharma</button>
+          <button class="btn btn-primary" onclick="openAddBillModal()">+ Add Bill</button>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="bill-header" id="bill-header-cards"></div>
+        <div class="filter-bar">
+          <select class="form-control" id="bill-filter-pharma" onchange="renderBillsTable()">
+            <option value="">All Pharmas</option>
+          </select>
+          <select class="form-control" id="bill-filter-status" onchange="renderBillsTable()" style="width:auto;min-width:130px">
+            <option value="">All Status</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pharma</th>
+                <th>Bill No.</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bills-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STOCK PAGE ══════════════════════════════════════ -->
+    <div class="page" id="page-stock">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Stock</div>
+          <div class="page-sub">Product inventory by pharma</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddProductModal()">+ Add Product</button>
+      </div>
+      <div class="page-body">
+        <div class="filter-bar">
+          <select class="form-control" id="stock-filter-pharma" onchange="renderStockPage()" style="min-width:200px">
+            <option value="">All Pharmas</option>
+          </select>
+        </div>
+        <div class="stat-row" id="stock-stat-row" style="margin-bottom:20px"></div>
+        <div class="stock-grid" id="stock-grid"></div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS PAGE ══════════════════════════════════ -->
+    <div class="page" id="page-analytics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Analytics</div>
+          <div class="page-sub">Revenue, profit & business accumulation</div>
+        </div>
+        <select class="form-control" id="analytics-filter-pharma" onchange="renderAnalytics()" style="width:auto;min-width:180px">
+          <option value="">All Pharmas</option>
+        </select>
+      </div>
+      <div class="page-body">
+        <div class="stat-row" id="analytics-stat-row"></div>
+        <div class="analytics-grid">
+          <div class="analytics-card" id="business-accum-card">
+            <div class="ac-title">Business Accumulation (12-month)</div>
+            <div id="business-accum-content"></div>
+          </div>
+          <div class="analytics-card">
+            <div class="ac-title">Bills Breakdown</div>
+            <div id="bills-breakdown-content"></div>
+          </div>
+        </div>
+        <div class="section-header"><div class="section-title">Bill History</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Pharma</th><th>Date</th><th>Amount</th><th>Type</th><th>Status</th></tr>
+            </thead>
+            <tbody id="analytics-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- .app-shell -->
+
+<!-- ═══ MODALS ════════════════════════════════════════════ -->
+
+<!-- Add Pharma Modal -->
+<div class="modal-overlay" id="modal-add-pharma">
+  <div class="modal">
+    <div class="modal-title">Add Pharma</div>
+    <div class="form-group">
+      <label class="form-label">Pharma Name</label>
+      <input class="form-control" id="mp-name" placeholder="e.g. Dermcare">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Billing Name (if different)</label>
+      <input class="form-control" id="mp-alias" placeholder="e.g. Mars Enterprises">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-control" id="mp-type">
+        <option value="profit">Profit (buy at 25–35% discount)</option>
+        <option value="business">Business (5% paid, rest = credit)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Discount %</label>
+      <input class="form-control" id="mp-pct" type="number" placeholder="e.g. 30">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-pharma')">Cancel</button>
+      <button class="btn btn-primary" onclick="addPharma()">Add Pharma</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Bill Modal -->
+<div class="modal-overlay" id="modal-add-bill">
+  <div class="modal">
+    <div class="modal-title">Add Bill</div>
+    <div class="form-group">
+      <label class="form-label">Pharma</label>
+      <select class="form-control" id="mb-pharma"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Bill No.</label>
+        <input class="form-control" id="mb-billno" placeholder="e.g. INV-001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bill Date</label>
+        <input class="form-control" type="date" id="mb-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (PKR)</label>
+      <input class="form-control" id="mb-amount" type="number" placeholder="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-control" id="mb-desc" placeholder="Products / notes..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-control" id="mb-status">
+        <option value="unpaid">Unpaid</option>
+        <option value="paid">Paid</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-bill')">Cancel</button>
+      <button class="btn btn-primary" onclick="addBill()">Add Bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="modal-add-product">
+  <div class="modal">
+    <div class="modal-title">Add Product to Stock</div>
+    <div class="form-group">
+      <label class="form-label">Pharma</label>
+      <select class="form-control" id="mpr-pharma"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Product Name</label>
+      <input class="form-control" id="mpr-name" placeholder="e.g. Glowris Cream 30gm">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Quantity</label>
+        <input class="form-control" id="mpr-qty" type="number" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Low Stock Alert (≤)</label>
+        <input class="form-control" id="mpr-low" type="number" placeholder="2">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date Added</label>
+      <input class="form-control" type="date" id="mpr-date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-product')">Cancel</button>
+      <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ DATA LAYER ═══════════════════════════════════════════
+
+const STORAGE_KEY = 'revive_pharma_v2';
+
+function loadData() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  return getDefaultData();
+}
+
+function saveData(d) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e) {}
+}
+
+function getDefaultData() {
+  return {
+    pharmas: [
+      { id: 'arcure', name: 'Arcure Pharma', alias: 'Mars Enterprises', type: 'profit', pct: 30 },
+      { id: 'truecare', name: 'TrueCare', alias: 'Rapid Pharma', type: 'business', pct: 30 },
+      { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 30 },
+      { id: 'auraceutical', name: 'Auraceutical', alias: '', type: 'profit', pct: 30 },
+      { id: 'dermcare', name: 'Dermcare', alias: '', type: 'profit', pct: 30 },
+    ],
+    bills: [
+      // Arcure Pharma (Mars Enterprises) - both unpaid
+      { id: 'b1', pharmaId: 'arcure', billNo: '01', date: '2026-07-07', amount: 16250, desc: 'ARCU GLEAM Facewash ×5, ARCUDERM CS Serum ×5', status: 'unpaid' },
+      { id: 'b2', pharmaId: 'arcure', billNo: '02', date: '2026-08-12', amount: 32500, desc: 'ARCU GLEAM Facewash ×10, ARCUDERM CS Serum ×10', status: 'unpaid' },
+      // TrueCare (Rapid Pharma) - 3 paid, 1 unpaid
+      { id: 'b3', pharmaId: 'truecare', billNo: '565114', date: '2026-07-09', amount: 115262, desc: 'Elysion Caps, Glowris Cream, Provillus Hair Spray, Provillus Shampoo, Provillus-T Tab', status: 'paid' },
+      { id: 'b4', pharmaId: 'truecare', billNo: '577462', date: '2026-09-03', amount: 24434, desc: 'Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
+      { id: 'b5', pharmaId: 'truecare', billNo: '567340', date: '2026-07-20', amount: 20551, desc: 'Acelga Face Wash ×3, Provillus Hair Spray ×3, Provillus Shampoo ×3, Provillus-T Tab ×3, Tinzo UK Ointment ×3', status: 'paid' },
+      { id: 'b6', pharmaId: 'truecare', billNo: '577615', date: '2026-09-04', amount: 28257, desc: 'Dermeola Lotion ×5, Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
+      { id: 'b7', pharmaId: 'truecare', billNo: '587810', date: '2026-10-16', amount: 19978, desc: 'Acelga Face Wash ×5, Glowris Cream ×5, Provillus Shampoo ×5', status: 'unpaid' },
+      // Helix (Ascent Enterprises) - unpaid
+      { id: 'b8', pharmaId: 'helix', billNo: '7549', date: '2026-07-09', amount: 134452, desc: 'Clariderm Anti Acne Face Wash ×10, Clariderm Anti Acne Serum ×5, Eyeconic Serum ×5, Hydra FX Moisturizing Serum ×5, Solero SC SPF ×5, Solero Tinted SPF ×5, Tressfix Hair Serum ×2+×8, Tressfix Shampoo ×10, Tressfix Tablet ×10, Wynn Brightening Cream ×5, Wynn Brightening Serum ×5', status: 'unpaid' },
+    ],
+    products: [
+      // Arcure Pharma
+      { id: 'p1', pharmaId: 'arcure', name: 'ARCU GLEAM Facewash', qty: 6, total: 15, lowAt: 2, dateAdded: '2026-08-12' },
+      { id: 'p2', pharmaId: 'arcure', name: 'ARCUDERM CS Serum', qty: 6, total: 15, lowAt: 2, dateAdded: '2026-08-12' },
+      // TrueCare
+      { id: 'p3', pharmaId: 'truecare', name: 'Acelga Face Wash', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04' },
+      { id: 'p4', pharmaId: 'truecare', name: 'Provillus Shampoo', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04' },
+      { id: 'p5', pharmaId: 'truecare', name: 'Glowris Cream', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04' },
+      // Helix - from bill: original quantities, mark sold as 0
+      { id: 'p6', pharmaId: 'helix', name: 'Solero Tinted SPF 60', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
+      { id: 'p7', pharmaId: 'helix', name: 'Tressfix Tablet 30s', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
+      { id: 'p8', pharmaId: 'helix', name: 'Tressfix Hair Serum 60ml', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
+      { id: 'p9', pharmaId: 'helix', name: 'Tressfix Shampoo 120ml', qty: 5, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
+      { id: 'p10', pharmaId: 'helix', name: 'Clariderm Anti Acne Face Wash', qty: 8, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
+      { id: 'p11', pharmaId: 'helix', name: 'Clariderm Anti Acne Serum', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
+      { id: 'p12', pharmaId: 'helix', name: 'Wynn Brightening Cream 30gm', qty: 3, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
+      { id: 'p13', pharmaId: 'helix', name: 'Wynn Brightening Serum 20ml', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
+      // Sold / finished from Helix bill
+      { id: 'p14', pharmaId: 'helix', name: 'Eyeconic Serum 20ml', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
+      { id: 'p15', pharmaId: 'helix', name: 'Hydra FX Moisturizing Serum', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
+      { id: 'p16', pharmaId: 'helix', name: 'Solero SC SPF40/P++ 30gm', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
+    ]
+  };
+}
+
+let DB = loadData();
+
+// ═══ HELPERS ══════════════════════════════════════════════
+
+const fmt = n => 'PKR ' + Number(n).toLocaleString('en-PK', { maximumFractionDigits: 0 });
+const fmtShort = n => {
+  if (n >= 1000000) return 'PKR ' + (n/1000000).toFixed(2) + 'M';
+  if (n >= 1000) return 'PKR ' + (n/1000).toFixed(0) + 'K';
+  return 'PKR ' + n;
+};
+const fmtDate = d => { if(!d) return '—'; const dt = new Date(d); return dt.toLocaleDateString('en-PK', {day:'2-digit',month:'short',year:'numeric'}); };
+const uid = () => Math.random().toString(36).slice(2,9);
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function getPharma(id) { return DB.pharmas.find(p => p.id === id); }
+function getBillsFor(pharmaId) { return DB.bills.filter(b => b.pharmaId === pharmaId); }
+function getProductsFor(pharmaId) { return DB.products.filter(p => p.pharmaId === pharmaId); }
+
+function pharmaStats(pharmaId) {
+  const bills = getBillsFor(pharmaId);
+  const totalBilled = bills.reduce((s,b) => s + b.amount, 0);
+  const totalPaid = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
+  const totalPending = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + b.amount, 0);
+  const p = getPharma(pharmaId);
+  const clientPct = p?.type === 'business' ? 5 : (p?.pct || 30);
+  const businessCredit = p?.type === 'business' ? totalPaid * ((p.pct - 5) / 100) : 0;
+  const profit = p?.type === 'profit' ? totalPaid * (p.pct / 100) : 0;
+  return { totalBilled, totalPaid, totalPending, businessCredit, profit };
+}
+
+function allStats() {
+  let totalBilled=0, totalPaid=0, totalPending=0, totalProfit=0, totalBusiness=0;
+  DB.pharmas.forEach(p => {
+    const s = pharmaStats(p.id);
+    totalBilled += s.totalBilled;
+    totalPaid += s.totalPaid;
+    totalPending += s.totalPending;
+    totalProfit += s.profit;
+    totalBusiness += s.businessCredit;
+  });
+  return { totalBilled, totalPaid, totalPending, totalProfit, totalBusiness };
+}
+
+// ═══ PAGE NAVIGATION ══════════════════════════════════════
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelector(`[data-page="${name}"]`).classList.add('active');
+  if (name === 'home') renderHome();
+  if (name === 'billing') renderBilling();
+  if (name === 'stock') renderStock();
+  if (name === 'analytics') renderAnalytics();
+}
+
+// ═══ HOME PAGE ════════════════════════════════════════════
+
+function renderHome() {
+  const s = allStats();
+  document.getElementById('home-stat-row').innerHTML = `
+    <div class="stat-tile">
+      <div class="tile-label">Total Billed</div>
+      <div class="tile-val">${fmtShort(s.totalBilled)}</div>
+      <div class="tile-meta">Across all pharmas</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Total Paid</div>
+      <div class="tile-val profit">${fmtShort(s.totalPaid)}</div>
+      <div class="tile-meta">Bills cleared</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Pending</div>
+      <div class="tile-val danger">${fmtShort(s.totalPending)}</div>
+      <div class="tile-meta">Outstanding amount</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Total Profit</div>
+      <div class="tile-val profit">${fmtShort(s.totalProfit)}</div>
+      <div class="tile-meta">From profit pharmas</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Business Credit</div>
+      <div class="tile-val business">${fmtShort(s.totalBusiness)}</div>
+      <div class="tile-meta">12-month accumulation</div>
+    </div>
+  `;
+
+  const businessPharmas = DB.pharmas.filter(p => p.type === 'business');
+  const profitPharmas = DB.pharmas.filter(p => p.type === 'profit');
+
+  document.getElementById('home-business-grid').innerHTML =
+    businessPharmas.length ? businessPharmas.map(p => pharmaCard(p)).join('') :
+    '<div class="empty-state"><div class="es-icon">🤝</div><div class="es-title">No business pharmas yet</div></div>';
+
+  document.getElementById('home-profit-grid').innerHTML =
+    profitPharmas.length ? profitPharmas.map(p => pharmaCard(p)).join('') :
+    '<div class="empty-state"><div class="es-icon">💰</div><div class="es-title">No profit pharmas yet</div></div>';
+}
+
+function pharmaCard(p) {
+  const s = pharmaStats(p.id);
+  const creditLine = p.type === 'business'
+    ? `<div class="pharma-stat-item"><div class="psi-label">Business Credit</div><div class="psi-val business">${fmtShort(s.businessCredit)}</div></div>`
+    : `<div class="pharma-stat-item"><div class="psi-label">Profit</div><div class="psi-val profit">${fmtShort(s.profit)}</div></div>`;
+  return `
+    <div class="pharma-card" onclick="showPage('billing')">
+      <div class="pharma-card-head">
+        <div>
+          <div class="pharma-name">${esc(p.name)}</div>
+          ${p.alias ? `<div class="pharma-alias">billed as ${esc(p.alias)}</div>` : ''}
+        </div>
+        <span class="type-badge ${p.type}">${p.type}</span>
+      </div>
+      <div class="pharma-stats">
+        <div class="pharma-stat-item">
+          <div class="psi-label">Total Billed</div>
+          <div class="psi-val">${fmtShort(s.totalBilled)}</div>
+        </div>
+        <div class="pharma-stat-item">
+          <div class="psi-label">Paid</div>
+          <div class="psi-val profit">${fmtShort(s.totalPaid)}</div>
+        </div>
+        <div class="pharma-stat-item">
+          <div class="psi-label">Pending</div>
+          <div class="psi-val pending">${fmtShort(s.totalPending)}</div>
+        </div>
+        ${creditLine}
+      </div>
+    </div>`;
+}
+
+// ═══ BILLING PAGE ═════════════════════════════════════════
+
+function renderBilling() {
+  // Populate pharma filter dropdowns
+  ['bill-filter-pharma', 'mb-pharma'].forEach(id => {
+    const el = document.getElementById(id);
+    const cur = el.value;
+    el.innerHTML = (id === 'bill-filter-pharma' ? '<option value="">All Pharmas</option>' : '<option value="">Select Pharma...</option>') +
+      DB.pharmas.map(p => `<option value="${p.id}"${p.id===cur?' selected':''}>${esc(p.name)}</option>`).join('');
+  });
+  renderBillHeaderCards();
+  renderBillsTable();
+}
+
+function renderBillHeaderCards() {
+  const total = DB.bills.reduce((s,b) => s + b.amount, 0);
+  const paid = DB.bills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
+  const pending = DB.bills.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+
+  let perPharmaHTML = '';
+  DB.pharmas.forEach(p => {
+    const pp = getBillsFor(p.id).filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    if (pp > 0) perPharmaHTML += `
+      <div class="bill-header-card">
+        <div class="bhc-label">${esc(p.name)} Pending</div>
+        <div class="bhc-val red">${fmt(pp)}</div>
+      </div>`;
+  });
+
+  document.getElementById('bill-header-cards').innerHTML = `
+    <div class="bill-header-card">
+      <div class="bhc-label">Total Amount Pending</div>
+      <div class="bhc-val red">${fmt(pending)}</div>
+    </div>
+    <div class="bill-header-card">
+      <div class="bhc-label">Total Paid</div>
+      <div class="bhc-val green">${fmt(paid)}</div>
+    </div>
+    <div class="bill-header-card">
+      <div class="bhc-label">Total Billed</div>
+      <div class="bhc-val">${fmt(total)}</div>
+    </div>
+    ${perPharmaHTML}
+  `;
+}
+
+function renderBillsTable() {
+  const pharmaFilter = document.getElementById('bill-filter-pharma').value;
+  const statusFilter = document.getElementById('bill-filter-status').value;
+  let bills = [...DB.bills];
+  if (pharmaFilter) bills = bills.filter(b => b.pharmaId === pharmaFilter);
+  if (statusFilter) bills = bills.filter(b => b.status === statusFilter);
+  bills.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  const tbody = document.getElementById('bills-tbody');
+  if (!bills.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="es-icon">🧾</div><div class="es-title">No bills found</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = bills.map(b => {
+    const p = getPharma(b.pharmaId);
+    return `<tr>
+      <td>
+        <div class="fw-600">${esc(p?.name||'?')}</div>
+        ${p?.alias ? `<div class="text-xs">${esc(p.alias)}</div>` : ''}
+      </td>
+      <td class="td-mono">${esc(b.billNo||'—')}</td>
+      <td class="td-mono">${fmtDate(b.date)}</td>
+      <td class="td-mono fw-600">${fmt(b.amount)}</td>
+      <td style="max-width:220px;word-break:break-word">${esc(b.desc||'—')}</td>
+      <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
+      <td>
+        ${b.status === 'unpaid'
+          ? `<button class="btn btn-sm btn-primary" onclick="markPaid('${b.id}')">Mark Paid</button>`
+          : `<button class="btn btn-sm btn-ghost" onclick="markUnpaid('${b.id}')">Mark Unpaid</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function markPaid(id) {
+  const b = DB.bills.find(b => b.id === id);
+  if (b) { b.status = 'paid'; saveData(DB); renderBilling(); }
+}
+function markUnpaid(id) {
+  const b = DB.bills.find(b => b.id === id);
+  if (b) { b.status = 'unpaid'; saveData(DB); renderBilling(); }
+}
+
+// ═══ STOCK PAGE ═══════════════════════════════════════════
+
+function renderStock() {
+  const sel = document.getElementById('stock-filter-pharma');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Pharmas</option>' +
+    DB.pharmas.map(p => `<option value="${p.id}"${p.id===cur?' selected':''}>${esc(p.name)}</option>`).join('');
+  renderStockPage();
+}
+
+function renderStockPage() {
+  const filter = document.getElementById('stock-filter-pharma').value;
+  let products = filter ? DB.products.filter(p => p.pharmaId === filter) : DB.products;
+
+  const total = products.length;
+  const low = products.filter(p => p.qty > 0 && p.qty <= p.lowAt).length;
+  const zero = products.filter(p => p.qty === 0).length;
+
+  document.getElementById('stock-stat-row').innerHTML = `
+    <div class="stat-tile">
+      <div class="tile-label">Total Products</div>
+      <div class="tile-val">${total}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Low Stock</div>
+      <div class="tile-val danger">${low}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Out of Stock</div>
+      <div class="tile-val danger">${zero}</div>
+    </div>
+  `;
+
+  if (!products.length) {
+    document.getElementById('stock-grid').innerHTML = `<div class="empty-state"><div class="es-icon">📦</div><div class="es-title">No products found</div><div class="es-sub">Add products using the button above</div></div>`;
+    return;
+  }
+
+  // Group by pharma
+  const grouped = {};
+  products.forEach(p => {
+    if (!grouped[p.pharmaId]) grouped[p.pharmaId] = [];
+    grouped[p.pharmaId].push(p);
+  });
+
+  let html = '';
+  Object.entries(grouped).forEach(([pharmaId, prods]) => {
+    const ph = getPharma(pharmaId);
+    html += `<div style="grid-column:1/-1;margin-top:8px;margin-bottom:4px">
+      <span style="font-size:13px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:0.5px">${esc(ph?.name||'Unknown')}</span>
+      <span class="type-badge ${ph?.type||'profit'}" style="margin-left:8px;font-size:9px">${ph?.type||''}</span>
+    </div>`;
+    prods.forEach(pr => {
+      const isLow = pr.qty > 0 && pr.qty <= pr.lowAt;
+      const isZero = pr.qty === 0;
+      const cls = isZero || isLow ? 'low-stock' : '';
+      const qtyCls = isZero ? 'zero' : isLow ? 'low' : 'ok';
+      html += `<div class="stock-product ${cls}">
+        <div>
+          <div class="sp-name">${esc(pr.name)}</div>
+          <div class="sp-added">Added ${fmtDate(pr.dateAdded)}</div>
+          <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+            <button class="btn btn-sm btn-ghost" onclick="adjustQty('${pr.id}',-1)">−</button>
+            <button class="btn btn-sm btn-ghost" onclick="adjustQty('${pr.id}',1)">+</button>
+            ${isLow ? '<span class="status-badge low">Low Stock</span>' : ''}
+            ${isZero ? '<span class="status-badge low">Out of Stock</span>' : ''}
+          </div>
+        </div>
+        <div class="sp-qty ${qtyCls}">${pr.qty}</div>
+      </div>`;
+    });
+  });
+
+  document.getElementById('stock-grid').innerHTML = html;
+}
+
+function adjustQty(id, delta) {
+  const p = DB.products.find(p => p.id === id);
+  if (p) {
+    p.qty = Math.max(0, p.qty + delta);
+    saveData(DB);
+    renderStockPage();
+  }
+}
+
+// ═══ ANALYTICS PAGE ═══════════════════════════════════════
+
+function renderAnalytics() {
+  const sel = document.getElementById('analytics-filter-pharma');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Pharmas</option>' +
+    DB.pharmas.map(p => `<option value="${p.id}"${p.id===cur?' selected':''}>${esc(p.name)}</option>`).join('');
+
+  const filter = cur;
+  let pharmas = filter ? DB.pharmas.filter(p => p.id === filter) : DB.pharmas;
+  let bills = filter ? DB.bills.filter(b => b.pharmaId === filter) : DB.bills;
+
+  const totalBilled = bills.reduce((s,b)=>s+b.amount,0);
+  const totalPaid = bills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
+  const totalPending = bills.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+
+  let totalProfit = 0, totalBusiness = 0;
+  pharmas.forEach(p => {
+    const s = pharmaStats(p.id);
+    if (p.type === 'profit') totalProfit += s.profit;
+    if (p.type === 'business') totalBusiness += s.businessCredit;
+  });
+
+  document.getElementById('analytics-stat-row').innerHTML = `
+    <div class="stat-tile">
+      <div class="tile-label">Total Revenue</div>
+      <div class="tile-val">${fmtShort(totalBilled)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Paid</div>
+      <div class="tile-val profit">${fmtShort(totalPaid)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Outstanding</div>
+      <div class="tile-val danger">${fmtShort(totalPending)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Profit Generated</div>
+      <div class="tile-val profit">${fmtShort(totalProfit)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Business Credit</div>
+      <div class="tile-val business">${fmtShort(totalBusiness)}</div>
+    </div>
+  `;
+
+  // Business accumulation (12-month)
+  const now = new Date();
+  const cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 1);
+  const businessPharmas = pharmas.filter(p => p.type === 'business');
+  let accumHTML = '';
+  if (businessPharmas.length) {
+    businessPharmas.forEach(p => {
+      const recentBills = getBillsFor(p.id).filter(b => b.status === 'paid' && new Date(b.date) >= cutoff);
+      const credit = recentBills.reduce((s,b) => s + b.amount * ((p.pct - 5)/100), 0);
+      const totalPaidAll = getBillsFor(p.id).filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
+      const maxCredit = totalPaidAll * ((p.pct - 5)/100);
+      const pct = maxCredit > 0 ? Math.min(100, (credit/maxCredit)*100) : 0;
+      accumHTML += `
+        <div class="business-bar">
+          <div class="bb-label">
+            <span>${esc(p.name)}</span>
+            <span style="color:var(--business);font-weight:700">${fmt(credit)}</span>
+          </div>
+          <div class="bb-track"><div class="bb-fill" style="width:${pct}%"></div></div>
+          <div class="bb-meta">${p.pct}% discount structure · 5% paid · ${p.pct-5}% credit rate · 12-month window</div>
+        </div>`;
+    });
+  } else {
+    accumHTML = '<div class="text-sm" style="padding:12px 0">No business pharmas selected</div>';
+  }
+  document.getElementById('business-accum-content').innerHTML = accumHTML;
+
+  // Bills breakdown
+  let bkHTML = '';
+  pharmas.forEach(p => {
+    const pb = getBillsFor(p.id);
+    const paid = pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
+    const pend = pb.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    if (pb.length) {
+      bkHTML += `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-weight:600;font-size:13px">${esc(p.name)}</span>
+            <span class="type-badge ${p.type}" style="font-size:9px">${p.type}</span>
+          </div>
+          <div style="display:flex;gap:16px;font-size:12px;color:var(--fg2)">
+            <span>✓ Paid: <strong style="color:var(--paid)">${fmt(paid)}</strong></span>
+            <span>⏳ Pending: <strong style="color:var(--unpaid)">${fmt(pend)}</strong></span>
+          </div>
+        </div>`;
+    }
+  });
+  document.getElementById('bills-breakdown-content').innerHTML = bkHTML || '<div class="text-sm">No data</div>';
+
+  // Analytics table
+  const sortedBills = [...bills].sort((a,b) => new Date(b.date)-new Date(a.date));
+  const atbody = document.getElementById('analytics-tbody');
+  if (!sortedBills.length) {
+    atbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="es-icon">📊</div><div class="es-title">No bills yet</div></div></td></tr>`;
+    return;
+  }
+  atbody.innerHTML = sortedBills.map(b => {
+    const p = getPharma(b.pharmaId);
+    return `<tr>
+      <td class="fw-600">${esc(p?.name||'?')}</td>
+      <td class="td-mono">${fmtDate(b.date)}</td>
+      <td class="td-mono fw-600">${fmt(b.amount)}</td>
+      <td><span class="type-badge ${p?.type||'profit'}">${p?.type||''}</span></td>
+      <td><span class="status-badge ${b.status}">${b.status==='paid'?'✓ Paid':'⏳ Unpaid'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══ MODALS ════════════════════════════════════════════════
+
+function openAddPharmaModal() {
+  document.getElementById('mp-name').value = '';
+  document.getElementById('mp-alias').value = '';
+  document.getElementById('mp-pct').value = '30';
+  openModal('modal-add-pharma');
+}
+
+function addPharma() {
+  const name = document.getElementById('mp-name').value.trim();
+  if (!name) return alert('Please enter a pharma name');
+  const alias = document.getElementById('mp-alias').value.trim();
+  const type = document.getElementById('mp-type').value;
+  const pct = parseInt(document.getElementById('mp-pct').value) || 30;
+  DB.pharmas.push({ id: uid(), name, alias, type, pct });
+  saveData(DB);
+  closeModal('modal-add-pharma');
+  renderHome();
+}
+
+function openAddBillModal() {
+  // Populate pharma select
+  const sel = document.getElementById('mb-pharma');
+  sel.innerHTML = '<option value="">Select Pharma...</option>' +
+    DB.pharmas.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('mb-billno').value = '';
+  document.getElementById('mb-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mb-amount').value = '';
+  document.getElementById('mb-desc').value = '';
+  document.getElementById('mb-status').value = 'unpaid';
+  openModal('modal-add-bill');
+}
+
+function addBill() {
+  const pharmaId = document.getElementById('mb-pharma').value;
+  if (!pharmaId) return alert('Select a pharma');
+  const amount = parseFloat(document.getElementById('mb-amount').value);
+  if (!amount || amount <= 0) return alert('Enter a valid amount');
+  DB.bills.push({
+    id: uid(),
+    pharmaId,
+    billNo: document.getElementById('mb-billno').value.trim(),
+    date: document.getElementById('mb-date').value,
+    amount,
+    desc: document.getElementById('mb-desc').value.trim(),
+    status: document.getElementById('mb-status').value
+  });
+  saveData(DB);
+  closeModal('modal-add-bill');
+  renderBilling();
+}
+
+function openAddProductModal() {
+  const sel = document.getElementById('mpr-pharma');
+  sel.innerHTML = '<option value="">Select Pharma...</option>' +
+    DB.pharmas.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('mpr-name').value = '';
+  document.getElementById('mpr-qty').value = '';
+  document.getElementById('mpr-low').value = '2';
+  document.getElementById('mpr-date').value = new Date().toISOString().slice(0,10);
+  openModal('modal-add-product');
+}
+
+function addProduct() {
+  const pharmaId = document.getElementById('mpr-pharma').value;
+  if (!pharmaId) return alert('Select a pharma');
+  const name = document.getElementById('mpr-name').value.trim();
+  if (!name) return alert('Enter a product name');
+  const qty = parseInt(document.getElementById('mpr-qty').value) || 0;
+  const lowAt = parseInt(document.getElementById('mpr-low').value) || 2;
+  const dateAdded = document.getElementById('mpr-date').value;
+  DB.products.push({ id: uid(), pharmaId, name, qty, total: qty, lowAt, dateAdded });
+  saveData(DB);
+  closeModal('modal-add-product');
+  renderStockPage();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ═══ INIT ══════════════════════════════════════════════════
+renderHome();
+</script>
