@@ -124,7 +124,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .page { display: none; flex-direction: column; flex: 1; }
 .page.active { display: flex; }
@@ -145,7 +145,6 @@ body {
 .page-body {
   padding: 24px 28px;
   flex: 1;
-  overflow-y: auto;
 }
 
 /* ─── CARDS / TILES ──────────────────────────────────────── */
@@ -461,7 +460,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   <!-- SIDEBAR -->
   <nav class="sidebar">
     <div class="sidebar-logo">
-      <img src="https://i.imgur.com/placeholder.png" alt="Revive" id="revive-logo-img" style="display:none;width:80px;margin:0 auto 8px;display:block">
       <svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" style="width:72px;margin:0 auto 6px;display:block">
         <!-- Arch frame with gold gradient -->
         <defs>
