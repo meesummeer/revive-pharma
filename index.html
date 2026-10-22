@@ -622,13 +622,20 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <div class="stat-row" id="analytics-stat-row"></div>
         <div class="analytics-grid">
           <div class="analytics-card" id="business-accum-card">
-            <div class="ac-title">Business Accumulation (12-month)</div>
+            <div class="ac-title">Pending by Pharma</div>
             <div id="business-accum-content"></div>
           </div>
           <div class="analytics-card">
             <div class="ac-title">Bills Breakdown</div>
             <div id="bills-breakdown-content"></div>
           </div>
+        </div>
+        <div class="analytics-card" id="helix-tracker-card" style="margin-top:16px;display:none">
+          <div class="ac-title" style="display:flex;align-items:center;gap:8px">
+            Helix Ledger Tracker
+            <span style="font-size:11px;font-weight:400;color:var(--fg3);margin-left:auto" id="helix-tracker-pct-label"></span>
+          </div>
+          <div id="helix-tracker-content"></div>
         </div>
         <div class="section-header"><div class="section-title">Bill History</div></div>
         <div class="table-wrap">
@@ -879,7 +886,15 @@ function getDefaultData() {
     pharmas: [
       { id: 'arcure', name: 'Arcure Pharma', alias: 'Mars Enterprises', type: 'profit', pct: 30 },
       { id: 'truecare', name: 'TrueCare', alias: 'Rapid Pharma', type: 'business', pct: 30 },
-      { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 25 },
+      { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 25,
+        helixDeal: {
+          target: 1244000,
+          doctors: [
+            { name: 'Dr. Salman', investment: 167000 },
+            { name: 'Dr. Husnain', investment: 144000 }
+          ]
+        }
+      },
       { id: 'auraceutical', name: 'Auraceutical', alias: '', type: 'profit', pct: 30 },
       { id: 'dermcare', name: 'Dermcare', alias: '', type: 'profit', pct: 30 },
       { id: 'gns', name: 'GNS Pharma', alias: '', type: 'profit', pct: 40 },
@@ -1382,10 +1397,70 @@ function renderAnalytics() {
       <td class="fw-600">${esc(p?.name||'?')}</td>
       <td class="td-mono">${fmtDate(b.date)}</td>
       <td class="td-mono fw-600">${fmt(b.amount)}</td>
-      <td><span class="type-badge ${p?.type||'profit'}">${p?.type||''}</span></td>
+      <td><span class="type-badge ${p?.type||'profit'}">${p?.pct||0}%</span></td>
       <td><span class="status-badge ${b.status}">${b.status==='paid'?'✓ Paid':'⏳ Unpaid'}</span></td>
     </tr>`;
   }).join('');
+
+  renderHelixTracker();
+}
+
+function renderHelixTracker() {
+  const helix = DB.pharmas.find(p => p.id === 'helix');
+  const card = document.getElementById('helix-tracker-card');
+  if (!helix || !helix.helixDeal) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const deal = helix.helixDeal;
+  const totalInvestment = deal.doctors.reduce((s, d) => s + d.investment, 0);
+  const helixBills = getBillsFor('helix');
+  const totalBusiness = helixBills.reduce((s, b) => s + b.amount, 0);
+  const progressPct = Math.min(100, (totalBusiness / deal.target) * 100);
+  const reimbursedSoFar = totalBusiness * (helix.pct / 100);
+  const reimbursementRemaining = Math.max(0, totalInvestment - reimbursedSoFar);
+
+  let doctorHTML = deal.doctors.map(d => {
+    const earned = Math.min(d.investment, reimbursedSoFar * (d.investment / totalInvestment));
+    const remaining = Math.max(0, d.investment - earned);
+    const dpct = Math.min(100, (earned / d.investment) * 100);
+    return `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">
+          <span style="font-weight:600">${esc(d.name)}</span>
+          <span style="color:var(--fg3)">${fmt(d.investment)} investment</span>
+        </div>
+        <div class="bb-track" style="margin-bottom:4px">
+          <div class="bb-fill" style="width:${dpct.toFixed(1)}%;background:var(--accent)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg3)">
+          <span>Earned back: <strong style="color:var(--accent)">${fmt(Math.round(earned))}</strong></span>
+          <span>Remaining: <strong style="color:var(--danger)">${fmt(Math.round(remaining))}</strong></span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('helix-tracker-pct-label').textContent =
+    `${progressPct.toFixed(1)}% of target business done`;
+
+  document.getElementById('helix-tracker-content').innerHTML = `
+    <div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+        <span style="font-weight:600;color:var(--fg2)">Total Business Progress</span>
+        <span><strong>${fmt(totalBusiness)}</strong> <span style="color:var(--fg3)">of ${fmt(deal.target)}</span></span>
+      </div>
+      <div class="bb-track" style="height:10px;margin-bottom:6px">
+        <div class="bb-fill" style="width:${progressPct.toFixed(1)}%;background:var(--accent);border-radius:99px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg3)">
+        <span>Total investment covered: <strong style="color:var(--fg2)">${fmt(Math.round(reimbursedSoFar))} / ${fmt(totalInvestment)}</strong></span>
+        <span>Still owed to doctors: <strong style="color:var(--danger)">${fmt(Math.round(reimbursementRemaining))}</strong></span>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Per Doctor</div>
+      ${doctorHTML}
+    </div>
+  `;
 }
 
 // ═══ MODALS ════════════════════════════════════════════════
