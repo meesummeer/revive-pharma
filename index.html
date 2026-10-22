@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Revive Pharma</title>
@@ -689,7 +690,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div class="modal-title">Add Bill</div>
     <div class="form-group">
       <label class="form-label">Pharma</label>
-      <select class="form-control" id="mb-pharma"></select>
+      <select class="form-control" id="mb-pharma" onchange="mbPharmaChanged()"></select>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -701,9 +702,19 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <input class="form-control" type="date" id="mb-date">
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Amount (PKR)</label>
-      <input class="form-control" id="mb-amount" type="number" placeholder="0">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Total (gross)</label>
+        <input class="form-control" type="number" id="mb-tp" placeholder="0" oninput="recalcFromTP('mb')">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Discount %</label>
+        <input class="form-control" type="number" id="mb-pct" placeholder="0" oninput="recalcFromTP('mb')">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Payable</label>
+        <input class="form-control" type="number" id="mb-amount" placeholder="0" oninput="recalcFromAmt('mb')">
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Description</label>
@@ -796,6 +807,16 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <input class="form-control" id="mpr-low" type="number" placeholder="2">
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Cost / unit (PKR)</label>
+        <input class="form-control" id="mpr-cost" type="number" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">MRP / unit (PKR)</label>
+        <input class="form-control" id="mpr-mrp" type="number" placeholder="0">
+      </div>
+    </div>
     <div class="form-group">
       <label class="form-label">Date Added</label>
       <input class="form-control" type="date" id="mpr-date">
@@ -803,6 +824,55 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-add-product')">Cancel</button>
       <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal-overlay" id="modal-edit-product">
+  <div class="modal">
+    <div class="modal-title">Edit Product</div>
+    <input type="hidden" id="ep-id">
+    <div class="form-group">
+      <label class="form-label">Pharma</label>
+      <select class="form-control" id="ep-pharma"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Product Name</label>
+      <input class="form-control" id="ep-name">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">In Stock</label>
+        <input class="form-control" id="ep-qty" type="number">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total Received</label>
+        <input class="form-control" id="ep-total" type="number">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Low Alert (≤)</label>
+        <input class="form-control" id="ep-low" type="number">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Cost / unit (PKR)</label>
+        <input class="form-control" id="ep-cost" type="number" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">MRP / unit (PKR)</label>
+        <input class="form-control" id="ep-mrp" type="number" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date Added</label>
+      <input class="form-control" type="date" id="ep-date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="color:var(--danger);border-color:var(--danger);background:transparent;margin-right:auto" onclick="deleteProduct()">🗑 Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-product')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditProduct()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -840,7 +910,9 @@ async function loadFromSupabase() {
       DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id||b.pharmaId, billNo: b.bill_no||b.billNo||'', date: b.date, amount: Number(b.amount), tp: Number(b.tp||0), desc: b.description||b.desc||'', status: b.status }));
       DB.products = products.map(p => {
         const seed = getDefaultData().products.find(s => s.id === p.id) || {};
-        return { id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added, mrp: seed.mrp||0, cost: seed.cost||0 };
+        // mrp/cost come from Supabase; seed values only cover the period before migrations/001 ran
+        return { id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added,
+          mrp: p.mrp != null ? Number(p.mrp) : (seed.mrp||0), cost: p.cost != null ? Number(p.cost) : (seed.cost||0) };
       });
       SB_READY = true;
       // Update local cache
@@ -1185,38 +1257,39 @@ async function markUnpaid(id) {
   saveData(DB); renderBilling(); showToast('Marked unpaid');
 }
 
-function ebRecalcFromTP() {
-  const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
-  const pct = parseFloat(document.getElementById('eb-pct').value) || 0;
+// Total / Disc % / Payable math shared by Add Bill ('mb') and Edit Bill ('eb') modals
+function recalcFromTP(prefix) {
+  const tp  = parseFloat(document.getElementById(prefix + '-tp').value) || 0;
+  const pct = parseFloat(document.getElementById(prefix + '-pct').value) || 0;
   if (tp > 0 && pct >= 0) {
-    document.getElementById('eb-amount').value = Math.round(tp * (1 - pct / 100));
+    document.getElementById(prefix + '-amount').value = Math.round(tp * (1 - pct / 100));
   }
 }
-function ebRecalcFromPct() {
-  const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
-  const amt = parseFloat(document.getElementById('eb-amount').value) || 0;
-  if (tp > 0 && amt >= 0) {
-    document.getElementById('eb-pct').value = parseFloat(((1 - amt / tp) * 100).toFixed(2));
-  }
-}
-function ebRecalcFromAmt() {
-  const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
-  const pct = parseFloat(document.getElementById('eb-pct').value) || 0;
-  if (pct >= 0 && tp <= 0) {
+function recalcFromAmt(prefix) {
+  const tp  = parseFloat(document.getElementById(prefix + '-tp').value) || 0;
+  const pct = parseFloat(document.getElementById(prefix + '-pct').value) || 0;
+  const amt = parseFloat(document.getElementById(prefix + '-amount').value) || 0;
+  if (tp <= 0) {
     // recalc tp from amount + pct
-    const amt = parseFloat(document.getElementById('eb-amount').value) || 0;
     if (amt > 0 && pct >= 0 && pct < 100) {
-      document.getElementById('eb-tp').value = Math.round(amt / (1 - pct / 100));
+      document.getElementById(prefix + '-tp').value = Math.round(amt / (1 - pct / 100));
     }
-  } else if (tp > 0) {
+  } else if (amt >= 0) {
     // recalc pct from tp + amount
-    const amt = parseFloat(document.getElementById('eb-amount').value) || 0;
-    if (amt >= 0) {
-      document.getElementById('eb-pct').value = parseFloat(((1 - amt / tp) * 100).toFixed(2));
-    }
+    document.getElementById(prefix + '-pct').value = parseFloat(((1 - amt / tp) * 100).toFixed(2));
   }
 }
-function ebRecalc() { ebRecalcFromTP(); }
+function ebRecalcFromTP() { recalcFromTP('eb'); }
+function ebRecalcFromAmt() { recalcFromAmt('eb'); }
+function ebRecalc() { recalcFromTP('eb'); }
+
+function mbPharmaChanged() {
+  const ph = getPharma(document.getElementById('mb-pharma').value);
+  // Default to the discount on this pharma's latest bill (e.g. Helix = 0%), else its pct terms
+  const last = ph && getBillsFor(ph.id).filter(b => b.tp > 0).sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+  document.getElementById('mb-pct').value = !ph ? '' : last ? parseFloat(((1 - last.amount/last.tp)*100).toFixed(2)) : ph.pct;
+  recalcFromTP('mb');
+}
 
 function openEditBill(id) {
   const b = DB.bills.find(b => b.id === id);
@@ -1343,6 +1416,7 @@ function renderStockPage() {
           <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
             <button class="btn btn-sm btn-ghost" onclick="adjustQty('${pr.id}',-1)">−</button>
             <button class="btn btn-sm btn-ghost" onclick="adjustQty('${pr.id}',1)">+</button>
+            <button class="btn btn-sm btn-ghost" onclick="openEditProduct('${pr.id}')" title="Edit">✏️</button>
             ${isLow ? '<span class="status-badge low">Low Stock</span>' : ''}
             ${isZero ? '<span class="status-badge low">Out of Stock</span>' : ''}
           </div>
@@ -1520,6 +1594,8 @@ function openAddBillModal() {
     DB.pharmas.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
   document.getElementById('mb-billno').value = '';
   document.getElementById('mb-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mb-tp').value = '';
+  document.getElementById('mb-pct').value = '';
   document.getElementById('mb-amount').value = '';
   document.getElementById('mb-desc').value = '';
   document.getElementById('mb-status').value = 'unpaid';
@@ -1530,13 +1606,14 @@ async function addBill() {
   const pharmaId = document.getElementById('mb-pharma').value;
   if (!pharmaId) return alert('Select a pharma');
   const amount = parseFloat(document.getElementById('mb-amount').value);
-  if (!amount || amount <= 0) return alert('Enter a valid amount');
+  if (!amount || amount <= 0) return alert('Enter a valid payable amount');
   const id = uid();
   const billNo = document.getElementById('mb-billno').value.trim();
   const date = document.getElementById('mb-date').value;
   const desc = document.getElementById('mb-desc').value.trim();
   const status = document.getElementById('mb-status').value;
-  const tp = parseFloat(document.getElementById('mb-tp')?.value) || 0;
+  const tp = parseFloat(document.getElementById('mb-tp').value) || 0;
+  if (tp && tp < amount) return alert('Total (gross) cannot be less than Payable');
   const row = { id, pharmaId, billNo, date, amount, tp, desc, status };
   if (SB_READY) {
     const { error } = await sb.from('bills').insert({ id, pharma_id: pharmaId, bill_no: billNo, date, amount, tp, description: desc, status });
@@ -1556,6 +1633,8 @@ function openAddProductModal() {
   document.getElementById('mpr-name').value = '';
   document.getElementById('mpr-qty').value = '';
   document.getElementById('mpr-low').value = '2';
+  document.getElementById('mpr-cost').value = '';
+  document.getElementById('mpr-mrp').value = '';
   document.getElementById('mpr-date').value = new Date().toISOString().slice(0,10);
   openModal('modal-add-product');
 }
@@ -1568,10 +1647,12 @@ async function addProduct() {
   const qty = parseInt(document.getElementById('mpr-qty').value) || 0;
   const lowAt = parseInt(document.getElementById('mpr-low').value) || 2;
   const dateAdded = document.getElementById('mpr-date').value;
+  const cost = parseFloat(document.getElementById('mpr-cost').value) || 0;
+  const mrp = parseFloat(document.getElementById('mpr-mrp').value) || 0;
   const id = uid();
-  const row = { id, pharmaId, name, qty, total: qty, lowAt, dateAdded };
+  const row = { id, pharmaId, name, qty, total: qty, lowAt, dateAdded, mrp, cost };
   if (SB_READY) {
-    const { error } = await sb.from('products').insert({ id, pharma_id: pharmaId, name, qty, total: qty, low_at: lowAt, date_added: dateAdded });
+    const { error } = await sbProductWrite({ id, pharma_id: pharmaId, name, qty, total: qty, low_at: lowAt, date_added: dateAdded, mrp, cost });
     if (error) { showToast('Save failed', 'err'); return; }
   }
   DB.products.push(row);
@@ -1579,6 +1660,80 @@ async function addProduct() {
   closeModal('modal-add-product');
   renderStockPage();
   showToast('Product added ✓');
+}
+
+// Insert (no id) or update (id) a products row. mrp/cost columns arrive with
+// migrations/001 — until it has run, retry without them so the rest still saves.
+async function sbProductWrite(cols, id) {
+  const run = c => id ? sb.from('products').update(c).eq('id', id) : sb.from('products').insert(c);
+  let res = await run(cols);
+  if (res.error && /mrp|cost/.test(res.error.message || '')) {
+    const { mrp, cost, ...rest } = cols;
+    res = await run(rest);
+    if (!res.error) setTimeout(() => showToast('Saved, but prices need the DB migration', 'err'), 2600);
+  }
+  return res;
+}
+
+function openEditProduct(id) {
+  const p = DB.products.find(p => p.id === id);
+  if (!p) return;
+  document.getElementById('ep-pharma').innerHTML =
+    DB.pharmas.map(ph => `<option value="${ph.id}"${ph.id===p.pharmaId?' selected':''}>${esc(ph.name)}</option>`).join('');
+  document.getElementById('ep-id').value = p.id;
+  document.getElementById('ep-name').value = p.name || '';
+  document.getElementById('ep-qty').value = p.qty ?? 0;
+  document.getElementById('ep-total').value = p.total ?? 0;
+  document.getElementById('ep-low').value = p.lowAt ?? 2;
+  document.getElementById('ep-cost').value = p.cost || '';
+  document.getElementById('ep-mrp').value = p.mrp || '';
+  document.getElementById('ep-date').value = p.dateAdded || '';
+  openModal('modal-edit-product');
+}
+
+async function saveEditProduct() {
+  const id = document.getElementById('ep-id').value;
+  const p = DB.products.find(p => p.id === id);
+  if (!p) return;
+  const name = document.getElementById('ep-name').value.trim();
+  if (!name) return alert('Enter a product name');
+  const upd = {
+    pharmaId:  document.getElementById('ep-pharma').value,
+    name,
+    qty:       Math.max(0, parseInt(document.getElementById('ep-qty').value) || 0),
+    total:     Math.max(0, parseInt(document.getElementById('ep-total').value) || 0),
+    lowAt:     Math.max(0, parseInt(document.getElementById('ep-low').value) || 0),
+    cost:      parseFloat(document.getElementById('ep-cost').value) || 0,
+    mrp:       parseFloat(document.getElementById('ep-mrp').value) || 0,
+    dateAdded: document.getElementById('ep-date').value,
+  };
+  if (SB_READY) {
+    const { error } = await sbProductWrite({
+      pharma_id: upd.pharmaId, name: upd.name, qty: upd.qty, total: upd.total, low_at: upd.lowAt,
+      date_added: upd.dateAdded || null, mrp: upd.mrp, cost: upd.cost
+    }, id);
+    if (error) { showToast('Save failed', 'err'); return; }
+  }
+  Object.assign(p, upd);
+  saveData(DB);
+  closeModal('modal-edit-product');
+  renderStockPage();
+  showToast('Product updated ✓');
+}
+
+async function deleteProduct() {
+  const id = document.getElementById('ep-id').value;
+  const p = DB.products.find(p => p.id === id);
+  if (!p || !confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+  if (SB_READY) {
+    const { error } = await sb.from('products').delete().eq('id', id);
+    if (error) { showToast('Delete failed', 'err'); return; }
+  }
+  DB.products = DB.products.filter(p => p.id !== id);
+  saveData(DB);
+  closeModal('modal-edit-product');
+  renderStockPage();
+  showToast('Product deleted');
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }

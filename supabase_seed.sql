@@ -27,6 +27,7 @@ create table bills (
   bill_no     text,
   date        date,
   amount      numeric not null,
+  tp          numeric default 0,
   description text default '',
   status      text not null default 'unpaid' check (status in ('paid','unpaid')),
   created_at  timestamptz default now()
@@ -41,6 +42,8 @@ create table products (
   total       integer default 0,
   low_at      integer default 2,
   date_added  date default current_date,
+  mrp         numeric default 0,
+  cost        numeric default 0,
   created_at  timestamptz default now()
 );
 
