@@ -937,26 +937,27 @@ function getProductsFor(pharmaId) { return DB.products.filter(p => p.pharmaId ==
 function pharmaStats(pharmaId) {
   const bills = getBillsFor(pharmaId);
   const p = getPharma(pharmaId);
-  // amount stored = what we actually PAY (post-discount / 5% of TP)
-  // TP (trade price before discount) = amount / (1 - pct/100) for profit pharmas
-  //                                  = amount / 0.05 for business pharmas
-  function billTP(b) {
+  // amount stored = TP (trade price, the full billed amount before any discount)
+  // Profit pharmas: we pay TP × (1 - pct/100)  e.g. 40% off → pay 60% of TP
+  // Business pharmas: we pay TP × 95% (5% discount), 20-25% of TP → business credit
+  function billPayable(b) {
     if (!p) return b.amount;
-    if (p.type === 'business') return b.amount / 0.05;
-    return b.amount / (1 - p.pct / 100);
+    if (p.type === 'business') return b.amount * 0.95;
+    return b.amount * (1 - p.pct / 100);
   }
-  const totalPayable  = bills.reduce((s,b) => s + b.amount, 0);
-  const totalTP       = bills.reduce((s,b) => s + billTP(b), 0);
-  const totalPaid     = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
-  const totalPending  = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + b.amount, 0);
-  const totalTPPaid   = bills.filter(b => b.status === 'paid').reduce((s,b) => s + billTP(b), 0);
-  const totalTPPending= bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + billTP(b), 0);
-  const businessCredit = p?.type === 'business' ? totalPaid * ((p.pct - 5) / 100) : 0;
+  const totalTP        = bills.reduce((s,b) => s + b.amount, 0);
+  const totalPayable   = bills.reduce((s,b) => s + billPayable(b), 0);
+  const totalTPPaid    = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
+  const totalTPPending = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + b.amount, 0);
+  const totalPaid      = bills.filter(b => b.status === 'paid').reduce((s,b) => s + billPayable(b), 0);
+  const totalPending   = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + billPayable(b), 0);
+  // Business credit: the portion of TP that accumulates as 12-month credit (pct - 5)% of TP
+  const businessCredit = p?.type === 'business' ? totalTP * ((p.pct - 5) / 100) : 0;
+  // Profit: the discount = margin (pct% of TP)
   const profit = p?.type === 'profit'
-    ? totalTP * (p.pct / 100)   // discount % of full TP = our margin
-    : totalPaid * 0.95;         // paid 5%, got 100% value → 95% margin
-  // expose totalBilled as TP for backward compat
-  return { totalBilled: totalTP, totalPayable, totalTP, totalPaid, totalPending, totalTPPaid, totalTPPending, businessCredit, profit };
+    ? totalTP * (p.pct / 100)
+    : totalTP * (p?.pct / 100 - 0.05); // business: credit portion is the gain
+  return { totalBilled: totalTP, totalTP, totalPayable, totalPaid, totalPending, totalTPPaid, totalTPPending, businessCredit, profit };
 }
 
 function allStats() {
@@ -1035,7 +1036,7 @@ function pharmaCard(p) {
     ? `<div class="pharma-stat-item"><div class="psi-label">Business Credit</div><div class="psi-val business">${fmtShort(s.businessCredit)}</div></div>`
     : `<div class="pharma-stat-item"><div class="psi-label">Profit</div><div class="psi-val profit">${fmtShort(s.profit)}</div></div>`;
   const discountLabel = p.type === 'business'
-    ? `We pay 5% · ${p.pct}% builds credit`
+    ? `5% discount · ${p.pct - 5}% builds credit`
     : `${p.pct}% discount off TP`;
   return `
     <div class="pharma-card" onclick="showPage('billing')">
@@ -1080,52 +1081,52 @@ function renderBilling() {
 }
 
 function renderBillHeaderCards() {
-  // Calculate payable (what we pay) and TP (trade price before discount)
-  let totalPayable=0, totalTP=0, paidPayable=0, pendingPayable=0, pendingTP=0;
+  // amount in DB = TP (full trade price). payable = what we actually pay after discount.
+  let totalTP=0, totalPayable=0, paidPayable=0, pendingTP=0, pendingPayable=0;
   DB.bills.forEach(b => {
     const p = getPharma(b.pharmaId);
-    const tp = billTPFor(b, p);
-    totalPayable += b.amount; totalTP += tp;
-    if (b.status === 'paid') paidPayable += b.amount;
-    else { pendingPayable += b.amount; pendingTP += tp; }
+    const payable = billPayableFor(b, p);
+    totalTP += b.amount; totalPayable += payable;
+    if (b.status === 'paid') paidPayable += payable;
+    else { pendingTP += b.amount; pendingPayable += payable; }
   });
 
   let perPharmaHTML = '';
   DB.pharmas.forEach(p => {
     const unpaidBills = getBillsFor(p.id).filter(b=>b.status==='unpaid');
-    const pp = unpaidBills.reduce((s,b)=>s+b.amount,0);
-    const ptp = unpaidBills.reduce((s,b)=>s+billTPFor(b,p),0);
-    if (pp > 0) perPharmaHTML += `
+    const pendTP  = unpaidBills.reduce((s,b)=>s+b.amount,0);
+    const pendPay = unpaidBills.reduce((s,b)=>s+billPayableFor(b,p),0);
+    if (pendTP > 0) perPharmaHTML += `
       <div class="bill-header-card">
         <div class="bhc-label">${esc(p.name)} Pending</div>
-        <div class="bhc-val red">${fmt(pp)}</div>
-        <div style="font-size:11px;color:var(--fg3);margin-top:2px">TP ${fmt(ptp)}</div>
+        <div class="bhc-val red">${fmt(pendPay)}</div>
+        <div style="font-size:11px;color:var(--fg3);margin-top:2px">of TP ${fmt(pendTP)}</div>
       </div>`;
   });
 
   document.getElementById('bill-header-cards').innerHTML = `
     <div class="bill-header-card">
-      <div class="bhc-label">Total Pending (We Pay)</div>
+      <div class="bhc-label">Total Pending (Payable)</div>
       <div class="bhc-val red">${fmt(pendingPayable)}</div>
-      <div style="font-size:11px;color:var(--fg3);margin-top:2px">TP ${fmt(pendingTP)}</div>
+      <div style="font-size:11px;color:var(--fg3);margin-top:2px">of TP ${fmt(pendingTP)}</div>
     </div>
     <div class="bill-header-card">
       <div class="bhc-label">Total Paid</div>
       <div class="bhc-val green">${fmt(paidPayable)}</div>
     </div>
     <div class="bill-header-card">
-      <div class="bhc-label">Total Billed (We Pay)</div>
-      <div class="bhc-val">${fmt(totalPayable)}</div>
-      <div style="font-size:11px;color:var(--fg3);margin-top:2px">TP ${fmt(totalTP)}</div>
+      <div class="bhc-label">Total TP Billed</div>
+      <div class="bhc-val">${fmt(totalTP)}</div>
+      <div style="font-size:11px;color:var(--fg3);margin-top:2px">we pay ${fmt(totalPayable)}</div>
     </div>
     ${perPharmaHTML}
   `;
 }
 
-function billTPFor(b, p) {
+function billPayableFor(b, p) {
   if (!p) return b.amount;
-  if (p.type === 'business') return b.amount / 0.05;
-  return b.amount / (1 - p.pct / 100);
+  if (p.type === 'business') return b.amount * 0.95;
+  return b.amount * (1 - p.pct / 100);
 }
 
 function renderBillsTable() {
@@ -1153,8 +1154,8 @@ function renderBillsTable() {
       <td class="td-mono">${esc(b.billNo||'—')}</td>
       <td class="td-mono">${fmtDate(b.date)}</td>
       <td class="td-mono">
-        <div class="fw-600">${fmt(b.amount)}</div>
-        <div class="text-xs" style="color:var(--fg3)">TP ${fmt(billTPFor(b, p))}</div>
+        <div class="fw-600">${fmt(billPayableFor(b, p))}</div>
+        <div class="text-xs" style="color:var(--fg3)">TP ${fmt(b.amount)}</div>
       </td>
       <td style="max-width:220px;word-break:break-word">${esc(b.desc||b.description||'—')}</td>
       <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
