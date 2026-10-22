@@ -1,0 +1,25 @@
+name: DB Migrate
+
+on:
+  push:
+    paths:
+      - 'migrations/*.sql'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run new migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # Install psql
+          sudo apt-get install -y postgresql-client
+
+          # Run every .sql file in migrations/ in order
+          for f in $(ls migrations/*.sql | sort); do
+            echo "Running $f..."
+            psql "$SUPABASE_DB_URL" -f "$f"
+          done
