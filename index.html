@@ -764,7 +764,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
     <div class="form-group">
       <label class="form-label">Description</label>
-      <input class="form-input" id="eb-desc" placeholder="Products included...">
+      <textarea class="form-input" id="eb-desc" placeholder="Products included..." rows="3" style="resize:vertical;min-height:72px;font-family:inherit;font-size:inherit" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-edit-bill')">Cancel</button>
@@ -884,8 +884,8 @@ function showToast(msg, type='ok') {
 function getDefaultData() {
   return {
     pharmas: [
-      { id: 'arcure', name: 'Arcure Pharma', alias: 'Mars Enterprises', type: 'profit', pct: 30 },
-      { id: 'truecare', name: 'TrueCare', alias: 'Rapid Pharma', type: 'business', pct: 30 },
+      { id: 'arcure', name: 'Arcure Pharma', alias: 'Mars Enterprises', type: 'profit', pct: 40 },
+      { id: 'truecare', name: 'TrueCare', alias: 'Rapid Pharma', type: 'business', pct: 5 },
       { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 25,
         helixDeal: {
           target: 1244000,
@@ -974,11 +974,15 @@ function allStats() {
     totalBilled += s.totalPayable;
     totalPaid += s.totalPaid;
     totalPending += s.totalPending;
+    const paidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'paid');
+    const unpaidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'unpaid');
     if (p.type === 'profit') {
-      const paidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'paid');
-      const unpaidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'unpaid');
       totalProfitEarned += paidBills.reduce((s,b) => s + b.amount * (p.pct/100), 0);
       totalProfitPending += unpaidBills.reduce((s,b) => s + b.amount * (p.pct/100), 0);
+    } else if (p.type === 'business') {
+      // profit = discount given = tp - amount
+      totalProfitEarned += paidBills.reduce((s,b) => s + Math.max(0, (b.tp||0) - b.amount), 0);
+      totalProfitPending += unpaidBills.reduce((s,b) => s + Math.max(0, (b.tp||0) - b.amount), 0);
     }
   });
   return { totalBilled, totalPaid, totalPending, totalProfitEarned, totalProfitPending };
@@ -1144,13 +1148,15 @@ function renderBillsTable() {
       <td class="td-mono"><div class="fw-600">${fmt(b.amount)}</div></td>
       <td style="max-width:220px;word-break:break-word">${esc(b.desc||b.description||'—')}</td>
       <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        ${b.status === 'unpaid'
-          ? `<button class="btn btn-sm btn-primary" onclick="markPaid('${b.id}')">Mark Paid</button>`
-          : `<button class="btn btn-sm btn-ghost" onclick="markUnpaid('${b.id}')">Mark Unpaid</button>`
-        }
-        <button class="btn btn-sm btn-ghost" onclick="openEditBill('${b.id}')" title="Edit">✏️</button>
-        <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);background:transparent" onclick="deleteBill('${b.id}')" title="Delete">🗑</button>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${b.status === 'unpaid'
+            ? `<button class="btn btn-sm btn-primary" onclick="markPaid('${b.id}')">Mark Paid</button>`
+            : `<button class="btn btn-sm btn-ghost" onclick="markUnpaid('${b.id}')">Mark Unpaid</button>`
+          }
+          <button class="btn btn-sm btn-ghost" onclick="openEditBill('${b.id}')" title="Edit">✏️</button>
+          <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);background:transparent" onclick="deleteBill('${b.id}')" title="Delete">🗑</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -1223,7 +1229,9 @@ function openEditBill(id) {
   document.getElementById('eb-pct').value = ph?.pct || '';
   document.getElementById('eb-amount').value = b.amount || '';
   document.getElementById('eb-status').value = b.status || 'unpaid';
-  document.getElementById('eb-desc').value = b.desc || b.description || '';
+  const descEl = document.getElementById('eb-desc');
+  descEl.value = b.desc || b.description || '';
+  setTimeout(() => { descEl.style.height='auto'; descEl.style.height=descEl.scrollHeight+'px'; }, 0);
   openModal('modal-edit-bill');
 }
 
@@ -1376,10 +1384,15 @@ function renderAnalytics() {
 
   let profitEarned=0, profitPending=0;
   pharmas.forEach(p => {
+    const pb = DB.bills.filter(b => b.pharmaId === p.id);
+    const paid = pb.filter(b=>b.status==='paid');
+    const pend = pb.filter(b=>b.status==='unpaid');
     if (p.type === 'profit') {
-      const pb = DB.bills.filter(b => b.pharmaId === p.id);
-      profitEarned += pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount*(p.pct/100),0);
-      profitPending += pb.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount*(p.pct/100),0);
+      profitEarned += paid.reduce((s,b)=>s+b.amount*(p.pct/100),0);
+      profitPending += pend.reduce((s,b)=>s+b.amount*(p.pct/100),0);
+    } else if (p.type === 'business') {
+      profitEarned += paid.reduce((s,b)=>s+Math.max(0,(b.tp||0)-b.amount),0);
+      profitPending += pend.reduce((s,b)=>s+Math.max(0,(b.tp||0)-b.amount),0);
     }
   });
 
