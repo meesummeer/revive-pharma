@@ -780,7 +780,7 @@ async function loadFromSupabase() {
     if (pharmas && bills && products) {
       // Map snake_case → camelCase
       DB.pharmas = pharmas.map(p => ({ id: p.id, name: p.name, alias: p.alias||'', type: p.type, pct: p.pct }));
-      DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id, billNo: b.bill_no||'', date: b.date, amount: Number(b.amount), desc: b.desc||'', status: b.status }));
+      DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id, billNo: b.bill_no||'', date: b.date, amount: Number(b.amount), desc: b.description||'', status: b.status }));
       DB.products = products.map(p => ({ id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added }));
       SB_READY = true;
       // Update local cache
@@ -1359,7 +1359,7 @@ async function addBill() {
   const status = document.getElementById('mb-status').value;
   const row = { id, pharmaId, billNo, date, amount, desc, status };
   if (SB_READY) {
-    const { error } = await sb.from('bills').insert({ id, pharma_id: pharmaId, bill_no: billNo, date, amount, desc, status });
+    const { error } = await sb.from('bills').insert({ id, pharma_id: pharmaId, bill_no: billNo, date, amount, description: desc, status });
     if (error) { showToast('Save failed', 'err'); return; }
   }
   DB.bills.push(row);
