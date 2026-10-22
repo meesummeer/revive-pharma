@@ -754,21 +754,72 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
+// ═══ SUPABASE CONFIG ══════════════════════════════════════
+const SUPABASE_URL = 'https://ikmubwxdjfizkyqfmhty.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbXVid3hkamZpemt5cWZtaHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2NjA4ODUsImV4cCI6MjEwODIzNjg4NX0.GxIyrjC-u9zfGu_oTvzDVlha73suO5OJFipM8ir8Y20';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
 // ═══ DATA LAYER ═══════════════════════════════════════════
+// Supabase-backed; localStorage used only as offline fallback cache
 
 const STORAGE_KEY = 'revive_pharma_v2';
 
-function loadData() {
+// In-memory DB — populated from Supabase on init
+let DB = { pharmas: [], bills: [], products: [] };
+let SB_READY = false;
+
+async function loadFromSupabase() {
   try {
-    const s = localStorage.getItem(STORAGE_KEY);
-    if (s) return JSON.parse(s);
-  } catch(e) {}
-  return getDefaultData();
+    const [{ data: pharmas }, { data: bills }, { data: products }] = await Promise.all([
+      sb.from('pharmas').select('*').order('created_at'),
+      sb.from('bills').select('*').order('date', { ascending: false }),
+      sb.from('products').select('*').order('date_added'),
+    ]);
+    if (pharmas && bills && products) {
+      // Map snake_case → camelCase
+      DB.pharmas = pharmas.map(p => ({ id: p.id, name: p.name, alias: p.alias||'', type: p.type, pct: p.pct }));
+      DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id, billNo: b.bill_no||'', date: b.date, amount: Number(b.amount), desc: b.desc||'', status: b.status }));
+      DB.products = products.map(p => ({ id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added }));
+      SB_READY = true;
+      // Update local cache
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); } catch(e) {}
+      return true;
+    }
+  } catch(e) { console.error('Supabase load error', e); }
+  return false;
 }
 
-function saveData(d) {
+function loadLocalFallback() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) { DB = JSON.parse(s); return true; }
+  } catch(e) {}
+  DB = getDefaultData();
+  return false;
+}
+
+async function saveData(d) {
+  DB = d;
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e) {}
+  // Supabase writes happen in individual mutation functions
+}
+
+function showToast(msg, type='ok') {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.15);transition:opacity 0.3s';
+    document.body.appendChild(t);
+  }
+  t.style.background = type==='ok' ? 'var(--success)' : 'var(--danger)';
+  t.style.color = '#fff';
+  t.style.opacity = '1';
+  t.textContent = msg;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.style.opacity='0'; }, 2500);
 }
 
 function getDefaultData() {
@@ -1031,13 +1082,25 @@ function renderBillsTable() {
   }).join('');
 }
 
-function markPaid(id) {
+async function markPaid(id) {
   const b = DB.bills.find(b => b.id === id);
-  if (b) { b.status = 'paid'; saveData(DB); renderBilling(); }
+  if (!b) return;
+  b.status = 'paid';
+  if (SB_READY) {
+    const { error } = await sb.from('bills').update({ status: 'paid' }).eq('id', id);
+    if (error) { showToast('Save failed', 'err'); b.status = 'unpaid'; renderBilling(); return; }
+  }
+  saveData(DB); renderBilling(); showToast('Marked paid ✓');
 }
-function markUnpaid(id) {
+async function markUnpaid(id) {
   const b = DB.bills.find(b => b.id === id);
-  if (b) { b.status = 'unpaid'; saveData(DB); renderBilling(); }
+  if (!b) return;
+  b.status = 'unpaid';
+  if (SB_READY) {
+    const { error } = await sb.from('bills').update({ status: 'unpaid' }).eq('id', id);
+    if (error) { showToast('Save failed', 'err'); b.status = 'paid'; renderBilling(); return; }
+  }
+  saveData(DB); renderBilling(); showToast('Marked unpaid');
 }
 
 // ═══ STOCK PAGE ═══════════════════════════════════════════
@@ -1116,13 +1179,17 @@ function renderStockPage() {
   document.getElementById('stock-grid').innerHTML = html;
 }
 
-function adjustQty(id, delta) {
+async function adjustQty(id, delta) {
   const p = DB.products.find(p => p.id === id);
-  if (p) {
-    p.qty = Math.max(0, p.qty + delta);
-    saveData(DB);
-    renderStockPage();
+  if (!p) return;
+  const newQty = Math.max(0, p.qty + delta);
+  const old = p.qty;
+  p.qty = newQty;
+  if (SB_READY) {
+    const { error } = await sb.from('products').update({ qty: newQty }).eq('id', id);
+    if (error) { showToast('Save failed', 'err'); p.qty = old; renderStockPage(); return; }
   }
+  saveData(DB); renderStockPage();
 }
 
 // ═══ ANALYTICS PAGE ═══════════════════════════════════════
@@ -1248,16 +1315,23 @@ function openAddPharmaModal() {
   openModal('modal-add-pharma');
 }
 
-function addPharma() {
+async function addPharma() {
   const name = document.getElementById('mp-name').value.trim();
   if (!name) return alert('Please enter a pharma name');
   const alias = document.getElementById('mp-alias').value.trim();
   const type = document.getElementById('mp-type').value;
   const pct = parseInt(document.getElementById('mp-pct').value) || 30;
-  DB.pharmas.push({ id: uid(), name, alias, type, pct });
+  const id = uid();
+  const row = { id, name, alias, type, pct };
+  if (SB_READY) {
+    const { error } = await sb.from('pharmas').insert({ id, name, alias, type, pct });
+    if (error) { showToast('Save failed', 'err'); return; }
+  }
+  DB.pharmas.push(row);
   saveData(DB);
   closeModal('modal-add-pharma');
   renderHome();
+  showToast('Pharma added ✓');
 }
 
 function openAddBillModal() {
@@ -1273,23 +1347,26 @@ function openAddBillModal() {
   openModal('modal-add-bill');
 }
 
-function addBill() {
+async function addBill() {
   const pharmaId = document.getElementById('mb-pharma').value;
   if (!pharmaId) return alert('Select a pharma');
   const amount = parseFloat(document.getElementById('mb-amount').value);
   if (!amount || amount <= 0) return alert('Enter a valid amount');
-  DB.bills.push({
-    id: uid(),
-    pharmaId,
-    billNo: document.getElementById('mb-billno').value.trim(),
-    date: document.getElementById('mb-date').value,
-    amount,
-    desc: document.getElementById('mb-desc').value.trim(),
-    status: document.getElementById('mb-status').value
-  });
+  const id = uid();
+  const billNo = document.getElementById('mb-billno').value.trim();
+  const date = document.getElementById('mb-date').value;
+  const desc = document.getElementById('mb-desc').value.trim();
+  const status = document.getElementById('mb-status').value;
+  const row = { id, pharmaId, billNo, date, amount, desc, status };
+  if (SB_READY) {
+    const { error } = await sb.from('bills').insert({ id, pharma_id: pharmaId, bill_no: billNo, date, amount, desc, status });
+    if (error) { showToast('Save failed', 'err'); return; }
+  }
+  DB.bills.push(row);
   saveData(DB);
   closeModal('modal-add-bill');
   renderBilling();
+  showToast('Bill added ✓');
 }
 
 function openAddProductModal() {
@@ -1303,7 +1380,7 @@ function openAddProductModal() {
   openModal('modal-add-product');
 }
 
-function addProduct() {
+async function addProduct() {
   const pharmaId = document.getElementById('mpr-pharma').value;
   if (!pharmaId) return alert('Select a pharma');
   const name = document.getElementById('mpr-name').value.trim();
@@ -1311,10 +1388,17 @@ function addProduct() {
   const qty = parseInt(document.getElementById('mpr-qty').value) || 0;
   const lowAt = parseInt(document.getElementById('mpr-low').value) || 2;
   const dateAdded = document.getElementById('mpr-date').value;
-  DB.products.push({ id: uid(), pharmaId, name, qty, total: qty, lowAt, dateAdded });
+  const id = uid();
+  const row = { id, pharmaId, name, qty, total: qty, lowAt, dateAdded };
+  if (SB_READY) {
+    const { error } = await sb.from('products').insert({ id, pharma_id: pharmaId, name, qty, total: qty, low_at: lowAt, date_added: dateAdded });
+    if (error) { showToast('Save failed', 'err'); return; }
+  }
+  DB.products.push(row);
   saveData(DB);
   closeModal('modal-add-product');
   renderStockPage();
+  showToast('Product added ✓');
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -1326,5 +1410,19 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 });
 
 // ═══ INIT ══════════════════════════════════════════════════
-renderHome();
+(async () => {
+  // Try Supabase first, fall back to localStorage/defaults
+  loadLocalFallback(); // show something instantly
+  renderHome();
+  const ok = await loadFromSupabase();
+  if (ok) {
+    // Re-render with live data
+    const cur = document.querySelector('.nav-item.active')?.dataset.page || 'home';
+    if (cur === 'home') renderHome();
+    else if (cur === 'billing') renderBilling();
+    else if (cur === 'stock') renderStock();
+    else if (cur === 'analytics') renderAnalytics();
+    showToast('Connected to Supabase ✓');
+  }
+})();
 </script>
