@@ -722,6 +722,49 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- Edit Bill Modal -->
+<div class="modal-overlay" id="modal-edit-bill">
+  <div class="modal">
+    <div class="modal-title">Edit Bill</div>
+    <input type="hidden" id="eb-id">
+    <div class="form-group">
+      <label class="form-label">Pharma</label>
+      <select class="form-input" id="eb-pharma"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Bill No.</label>
+        <input class="form-input" id="eb-billno" placeholder="e.g. 587810">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="eb-date">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Amount (TP)</label>
+        <input class="form-input" type="number" id="eb-amount" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="eb-status">
+          <option value="unpaid">Unpaid</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="eb-desc" placeholder="Products included...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-bill')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditBill()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Product Modal -->
 <div class="modal-overlay" id="modal-add-product">
   <div class="modal">
@@ -1080,11 +1123,13 @@ function renderBillsTable() {
       <td class="td-mono fw-600">${fmt(b.amount)}</td>
       <td style="max-width:220px;word-break:break-word">${esc(b.desc||'—')}</td>
       <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
-      <td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         ${b.status === 'unpaid'
           ? `<button class="btn btn-sm btn-primary" onclick="markPaid('${b.id}')">Mark Paid</button>`
           : `<button class="btn btn-sm btn-ghost" onclick="markUnpaid('${b.id}')">Mark Unpaid</button>`
         }
+        <button class="btn btn-sm btn-ghost" onclick="openEditBill('${b.id}')" title="Edit">✏️</button>
+        <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);background:transparent" onclick="deleteBill('${b.id}')" title="Delete">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -1109,6 +1154,56 @@ async function markUnpaid(id) {
     if (error) { showToast('Save failed', 'err'); b.status = 'paid'; renderBilling(); return; }
   }
   saveData(DB); renderBilling(); showToast('Marked unpaid');
+}
+
+function openEditBill(id) {
+  const b = DB.bills.find(b => b.id === id);
+  if (!b) return;
+  // Populate pharma dropdown
+  const sel = document.getElementById('eb-pharma');
+  sel.innerHTML = DB.pharmas.map(p => `<option value="${p.id}" ${p.id===b.pharmaId?'selected':''}>${esc(p.name)}</option>`).join('');
+  document.getElementById('eb-id').value = b.id;
+  document.getElementById('eb-billno').value = b.billNo || '';
+  document.getElementById('eb-date').value = b.date || '';
+  document.getElementById('eb-amount').value = b.amount || '';
+  document.getElementById('eb-status').value = b.status || 'unpaid';
+  document.getElementById('eb-desc').value = b.desc || '';
+  openModal('modal-edit-bill');
+}
+
+async function saveEditBill() {
+  const id = document.getElementById('eb-id').value;
+  const b = DB.bills.find(b => b.id === id);
+  if (!b) return;
+  b.pharmaId = document.getElementById('eb-pharma').value;
+  b.billNo   = document.getElementById('eb-billno').value.trim();
+  b.date     = document.getElementById('eb-date').value;
+  b.amount   = parseFloat(document.getElementById('eb-amount').value) || 0;
+  b.status   = document.getElementById('eb-status').value;
+  b.desc     = document.getElementById('eb-desc').value.trim();
+  if (SB_READY) {
+    const { error } = await sb.from('bills').update({
+      pharma_id: b.pharmaId, bill_no: b.billNo, date: b.date,
+      amount: b.amount, status: b.status, description: b.desc
+    }).eq('id', id);
+    if (error) { showToast('Save failed', 'err'); return; }
+  }
+  saveData(DB);
+  closeModal('modal-edit-bill');
+  renderBilling();
+  showToast('Bill updated ✓');
+}
+
+async function deleteBill(id) {
+  if (!confirm('Delete this bill? This cannot be undone.')) return;
+  if (SB_READY) {
+    const { error } = await sb.from('bills').delete().eq('id', id);
+    if (error) { showToast('Delete failed', 'err'); return; }
+  }
+  DB.bills = DB.bills.filter(b => b.id !== id);
+  saveData(DB);
+  renderBilling();
+  showToast('Bill deleted');
 }
 
 // ═══ STOCK PAGE ═══════════════════════════════════════════
