@@ -573,9 +573,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <thead>
               <tr>
                 <th>Pharma</th>
-                <th>Bill No.</th>
                 <th>Date</th>
-                <th>Amount</th>
+                <th>Total (Gross)</th>
+                <th>Payable</th>
                 <th>Description</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -630,14 +630,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <div id="bills-breakdown-content"></div>
           </div>
         </div>
-        <div class="analytics-card" id="helix-tracker-card" style="margin-top:16px;display:none">
-          <div class="ac-title" style="display:flex;align-items:center;gap:8px">
-            Helix Ledger Tracker
-            <span style="font-size:11px;font-weight:400;color:var(--fg3);margin-left:auto" id="helix-tracker-pct-label"></span>
-          </div>
-          <div id="helix-tracker-content"></div>
-        </div>
-        <div class="section-header"><div class="section-title">Bill History</div></div>
+<div class="section-header"><div class="section-title">Bill History</div></div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -844,7 +837,10 @@ async function loadFromSupabase() {
         return { id: p.id, name: p.name, alias: p.alias||'', type: p.type, pct: p.pct, ...(seed.helixDeal ? { helixDeal: seed.helixDeal } : {}) };
       });
       DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id, billNo: b.bill_no||'', date: b.date, amount: Number(b.amount), desc: b.description||'', status: b.status }));
-      DB.products = products.map(p => ({ id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added }));
+      DB.products = products.map(p => {
+        const seed = getDefaultData().products.find(s => s.id === p.id) || {};
+        return { id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added, mrp: seed.mrp||0, cost: seed.cost||0 };
+      });
       SB_READY = true;
       // Update local cache
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); } catch(e) {}
@@ -919,29 +915,29 @@ function getDefaultData() {
       { id: 'b9', pharmaId: 'gns', billNo: '01', date: '2026-10-22', amount: 56900, tp: 0, desc: 'Acnoaie Serum ×10, Acnoaie Face Wash ×10, Retegin Body Sol ×5', status: 'unpaid' },
     ],
     products: [
-      // Arcure Pharma
-      { id: 'p1', pharmaId: 'arcure', name: 'ARCU GLEAM Facewash', qty: 6, total: 15, lowAt: 2, dateAdded: '2026-08-12' },
-      { id: 'p2', pharmaId: 'arcure', name: 'ARCUDERM CS Serum', qty: 6, total: 15, lowAt: 2, dateAdded: '2026-08-12' },
-      // TrueCare
-      { id: 'p3', pharmaId: 'truecare', name: 'Acelga Face Wash', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04' },
-      { id: 'p4', pharmaId: 'truecare', name: 'Provillus Shampoo', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04' },
-      { id: 'p5', pharmaId: 'truecare', name: 'Glowris Cream', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04' },
-      // Helix - from bill: original quantities, mark sold as 0
-      { id: 'p6', pharmaId: 'helix', name: 'Solero Tinted SPF 60', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
-      { id: 'p7', pharmaId: 'helix', name: 'Tressfix Tablet 30s', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
-      { id: 'p8', pharmaId: 'helix', name: 'Tressfix Hair Serum 60ml', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
-      { id: 'p9', pharmaId: 'helix', name: 'Tressfix Shampoo 120ml', qty: 5, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
-      { id: 'p10', pharmaId: 'helix', name: 'Clariderm Anti Acne Face Wash', qty: 8, total: 10, lowAt: 3, dateAdded: '2026-07-09' },
-      { id: 'p11', pharmaId: 'helix', name: 'Clariderm Anti Acne Serum', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
-      { id: 'p12', pharmaId: 'helix', name: 'Wynn Brightening Cream 30gm', qty: 3, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
-      { id: 'p13', pharmaId: 'helix', name: 'Wynn Brightening Serum 20ml', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09' },
+      // Arcure Pharma (Mars Enterprises) — TP=cost, MRP from invoice
+      { id: 'p1', pharmaId: 'arcure', name: 'ARCU GLEAM Facewash', qty: 6, total: 15, lowAt: 2, dateAdded: '2026-08-12', mrp: 2150, cost: 1830 },
+      { id: 'p2', pharmaId: 'arcure', name: 'ARCUDERM CS Serum', qty: 6, total: 15, lowAt: 2, dateAdded: '2026-08-12', mrp: 2550, cost: 2170 },
+      // TrueCare (Rapid Pharma) — Rate=cost (5% off MRP), MRP from invoice
+      { id: 'p3', pharmaId: 'truecare', name: 'Acelga Face Wash', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04', mrp: 950, cost: 855 },
+      { id: 'p4', pharmaId: 'truecare', name: 'Provillus Shampoo', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04', mrp: 1550, cost: 1395 },
+      { id: 'p5', pharmaId: 'truecare', name: 'Glowris Cream', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-09-04', mrp: 2150, cost: 1935 },
+      // Helix (Ascent Enterprises) — Rate=cost, MRP from invoice
+      { id: 'p6', pharmaId: 'helix', name: 'Solero Tinted SPF 60', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09', mrp: 1020, cost: 1024 },
+      { id: 'p7', pharmaId: 'helix', name: 'Tressfix Tablet 30s', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-07-09', mrp: 0, cost: 807 },
+      { id: 'p8', pharmaId: 'helix', name: 'Tressfix Hair Serum 60ml', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-07-09', mrp: 0, cost: 2305 },
+      { id: 'p9', pharmaId: 'helix', name: 'Tressfix Shampoo 120ml', qty: 5, total: 10, lowAt: 3, dateAdded: '2026-07-09', mrp: 0, cost: 807 },
+      { id: 'p10', pharmaId: 'helix', name: 'Clariderm Anti Acne Face Wash', qty: 8, total: 10, lowAt: 3, dateAdded: '2026-07-09', mrp: 0, cost: 756 },
+      { id: 'p11', pharmaId: 'helix', name: 'Clariderm Anti Acne Serum', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09', mrp: 0, cost: 1700 },
+      { id: 'p12', pharmaId: 'helix', name: 'Wynn Brightening Cream 30gm', qty: 3, total: 5, lowAt: 2, dateAdded: '2026-07-09', mrp: 0, cost: 1530 },
+      { id: 'p13', pharmaId: 'helix', name: 'Wynn Brightening Serum 20ml', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-07-09', mrp: 0, cost: 1700 },
       // Sold / finished from Helix bill
-      { id: 'p14', pharmaId: 'helix', name: 'Eyeconic Serum 20ml', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
-      { id: 'p15', pharmaId: 'helix', name: 'Hydra FX Moisturizing Serum', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
-      { id: 'p16', pharmaId: 'helix', name: 'Solero SC SPF40/P++ 30gm', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
-      { id: 'p17', pharmaId: 'gns', name: 'Acnoaie Serum', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-10-22' },
-      { id: 'p18', pharmaId: 'gns', name: 'Acnoaie Face Wash', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-10-22' },
-      { id: 'p19', pharmaId: 'gns', name: 'Retegin Body Sol', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-10-22' },
+      { id: 'p14', pharmaId: 'helix', name: 'Eyeconic Serum 20ml', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09', mrp: 0, cost: 1870 },
+      { id: 'p15', pharmaId: 'helix', name: 'Hydra FX Moisturizing Serum', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09', mrp: 0, cost: 1700 },
+      { id: 'p16', pharmaId: 'helix', name: 'Solero SC SPF40/P++ 30gm', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09', mrp: 0, cost: 2635 },
+      { id: 'p17', pharmaId: 'gns', name: 'Acnoaie Serum', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-10-22', mrp: 0, cost: 0 },
+      { id: 'p18', pharmaId: 'gns', name: 'Acnoaie Face Wash', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-10-22', mrp: 0, cost: 0 },
+      { id: 'p19', pharmaId: 'gns', name: 'Retegin Body Sol', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-10-22', mrp: 0, cost: 0 },
     ]
   };
 }
@@ -1116,7 +1112,7 @@ function renderBillsTable() {
 
   const tbody = document.getElementById('bills-tbody');
   if (!bills.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="es-icon">🧾</div><div class="es-title">No bills found</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🧾</div><div class="es-title">No bills found</div></div></td></tr>`;
     return;
   }
   tbody.innerHTML = bills.map(b => {
@@ -1127,8 +1123,8 @@ function renderBillsTable() {
         ${p?.alias ? `<div class="text-xs">${esc(p.alias)}</div>` : ''}
         ${p ? `<div class="text-xs" style="color:var(--accent)">${p.pct}%</div>` : ''}
       </td>
-      <td class="td-mono">${esc(b.billNo||'—')}</td>
       <td class="td-mono">${fmtDate(b.date)}</td>
+      <td class="td-mono">${b.tp ? `<div class="fw-600">${fmt(b.tp)}</div>` : '<span style="color:var(--fg3)">—</span>'}</td>
       <td class="td-mono"><div class="fw-600">${fmt(b.amount)}</div></td>
       <td style="max-width:220px;word-break:break-word">${esc(b.desc||b.description||'—')}</td>
       <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
@@ -1283,10 +1279,16 @@ function renderStockPage() {
       const isZero = pr.qty === 0;
       const cls = isZero || isLow ? 'low-stock' : '';
       const qtyCls = isZero ? 'zero' : isLow ? 'low' : 'ok';
+      const priceRow = (pr.cost || pr.mrp) ? `
+          <div style="margin-top:5px;display:flex;gap:10px;font-size:11px;color:var(--fg3)">
+            ${pr.cost ? `<span>Cost: <strong style="color:var(--fg2)">PKR ${Number(pr.cost).toLocaleString()}</strong></span>` : ''}
+            ${pr.mrp ? `<span>MRP: <strong style="color:var(--fg2)">PKR ${Number(pr.mrp).toLocaleString()}</strong></span>` : ''}
+          </div>` : '';
       html += `<div class="stock-product ${cls}">
         <div>
           <div class="sp-name">${esc(pr.name)}</div>
           <div class="sp-added">Added ${fmtDate(pr.dateAdded)}</div>
+          ${priceRow}
           <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
             <button class="btn btn-sm btn-ghost" onclick="adjustQty('${pr.id}',-1)">−</button>
             <button class="btn btn-sm btn-ghost" onclick="adjustQty('${pr.id}',1)">+</button>
@@ -1406,65 +1408,6 @@ function renderAnalytics() {
     </tr>`;
   }).join('');
 
-  renderHelixTracker();
-}
-
-function renderHelixTracker() {
-  const helix = DB.pharmas.find(p => p.id === 'helix');
-  const card = document.getElementById('helix-tracker-card');
-  if (!helix || !helix.helixDeal) { card.style.display = 'none'; return; }
-  card.style.display = '';
-
-  const deal = helix.helixDeal;
-  const totalInvestment = deal.doctors.reduce((s, d) => s + d.investment, 0);
-  const helixBills = getBillsFor('helix');
-  const totalBusiness = helixBills.reduce((s, b) => s + b.amount, 0);
-  const progressPct = Math.min(100, (totalBusiness / deal.target) * 100);
-  const reimbursedSoFar = totalBusiness * (helix.pct / 100);
-  const reimbursementRemaining = Math.max(0, totalInvestment - reimbursedSoFar);
-
-  let doctorHTML = deal.doctors.map(d => {
-    const earned = Math.min(d.investment, reimbursedSoFar * (d.investment / totalInvestment));
-    const remaining = Math.max(0, d.investment - earned);
-    const dpct = Math.min(100, (earned / d.investment) * 100);
-    return `
-      <div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">
-          <span style="font-weight:600">${esc(d.name)}</span>
-          <span style="color:var(--fg3)">${fmt(d.investment)} investment</span>
-        </div>
-        <div class="bb-track" style="margin-bottom:4px">
-          <div class="bb-fill" style="width:${dpct.toFixed(1)}%;background:var(--accent)"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg3)">
-          <span>Earned back: <strong style="color:var(--accent)">${fmt(Math.round(earned))}</strong></span>
-          <span>Remaining: <strong style="color:var(--danger)">${fmt(Math.round(remaining))}</strong></span>
-        </div>
-      </div>`;
-  }).join('');
-
-  document.getElementById('helix-tracker-pct-label').textContent =
-    `${progressPct.toFixed(1)}% of target business done`;
-
-  document.getElementById('helix-tracker-content').innerHTML = `
-    <div style="margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
-        <span style="font-weight:600;color:var(--fg2)">Total Business Progress</span>
-        <span><strong>${fmt(totalBusiness)}</strong> <span style="color:var(--fg3)">of ${fmt(deal.target)}</span></span>
-      </div>
-      <div class="bb-track" style="height:10px;margin-bottom:6px">
-        <div class="bb-fill" style="width:${progressPct.toFixed(1)}%;background:var(--accent);border-radius:99px"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg3)">
-        <span>Total investment covered: <strong style="color:var(--fg2)">${fmt(Math.round(reimbursedSoFar))} / ${fmt(totalInvestment)}</strong></span>
-        <span>Still owed to doctors: <strong style="color:var(--danger)">${fmt(Math.round(reimbursementRemaining))}</strong></span>
-      </div>
-    </div>
-    <div style="border-top:1px solid var(--border);padding-top:14px">
-      <div style="font-size:11px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Per Doctor</div>
-      ${doctorHTML}
-    </div>
-  `;
 }
 
 // ═══ MODALS ════════════════════════════════════════════════
