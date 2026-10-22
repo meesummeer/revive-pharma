@@ -838,7 +838,11 @@ async function loadFromSupabase() {
     ]);
     if (pharmas && bills && products) {
       // Map snake_case → camelCase
-      DB.pharmas = pharmas.map(p => ({ id: p.id, name: p.name, alias: p.alias||'', type: p.type, pct: p.pct }));
+      const seedPharmas = getDefaultData().pharmas;
+      DB.pharmas = pharmas.map(p => {
+        const seed = seedPharmas.find(s => s.id === p.id) || {};
+        return { id: p.id, name: p.name, alias: p.alias||'', type: p.type, pct: p.pct, ...(seed.helixDeal ? { helixDeal: seed.helixDeal } : {}) };
+      });
       DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id, billNo: b.bill_no||'', date: b.date, amount: Number(b.amount), desc: b.description||'', status: b.status }));
       DB.products = products.map(p => ({ id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added }));
       SB_READY = true;
