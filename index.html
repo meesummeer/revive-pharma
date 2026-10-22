@@ -894,11 +894,11 @@ function pharmaStats(pharmaId) {
   const p = getPharma(pharmaId);
   const clientPct = p?.type === 'business' ? 5 : (p?.pct || 30);
   const businessCredit = p?.type === 'business' ? totalPaid * ((p.pct - 5) / 100) : 0;
-  // Profit pharmas: discount % of paid = profit margin
-  // Business pharmas: pay only 5% of bill → 95% of paid value is profit/saving
+  // Profit pharma: get pct% discount off TP, sell at MRP → discount = margin
+  // Business pharma: clinic pays 5% of bill, gets full product value → 95% of paid is margin
   const profit = p?.type === 'profit'
-    ? totalPaid * (p.pct / 100)
-    : totalPaid * 0.95; // pay 5%, get 100% value → 95% is effective profit
+    ? totalBilled * (p.pct / 100)  // e.g. 30% off billed TP amount
+    : totalPaid * 0.95;            // paid 5%, 95% is effective profit
   return { totalBilled, totalPaid, totalPending, businessCredit, profit };
 }
 
