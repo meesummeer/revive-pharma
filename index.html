@@ -1141,7 +1141,7 @@ function renderBillsTable() {
       <td>
         <div class="fw-600">${esc(p?.name||'?')}</div>
         ${p?.alias ? `<div class="text-xs">${esc(p.alias)}</div>` : ''}
-        ${p ? `<div class="text-xs" style="color:var(--accent)">${p.pct}%</div>` : ''}
+        ${(() => { const discPct = b.tp > 0 ? parseFloat(((1 - b.amount/b.tp)*100).toFixed(1)) : (p?.pct||0); return `<div class="text-xs" style="color:var(--accent)">${discPct}%</div>`; })()}
       </td>
       <td class="td-mono">${fmtDate(b.date)}</td>
       <td class="td-mono">${b.tp ? `<div class="fw-600">${fmt(b.tp)}</div>` : '<span style="color:var(--fg3)">—</span>'}</td>
@@ -1226,7 +1226,7 @@ function openEditBill(id) {
   document.getElementById('eb-billno').value = b.billNo || '';
   document.getElementById('eb-date').value = b.date || '';
   document.getElementById('eb-tp').value = b.tp || '';
-  document.getElementById('eb-pct').value = ph?.pct || '';
+  document.getElementById('eb-pct').value = b.tp > 0 ? parseFloat(((1 - b.amount/b.tp)*100).toFixed(2)) : (ph?.pct||'');
   document.getElementById('eb-amount').value = b.amount || '';
   document.getElementById('eb-status').value = b.status || 'unpaid';
   const descEl = document.getElementById('eb-desc');
