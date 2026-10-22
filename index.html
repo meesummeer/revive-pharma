@@ -968,14 +968,20 @@ function pharmaStats(pharmaId) {
 }
 
 function allStats() {
-  let totalBilled=0, totalPaid=0, totalPending=0;
+  let totalBilled=0, totalPaid=0, totalPending=0, totalProfitEarned=0, totalProfitPending=0;
   DB.pharmas.forEach(p => {
     const s = pharmaStats(p.id);
     totalBilled += s.totalPayable;
     totalPaid += s.totalPaid;
     totalPending += s.totalPending;
+    if (p.type === 'profit') {
+      const paidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'paid');
+      const unpaidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'unpaid');
+      totalProfitEarned += paidBills.reduce((s,b) => s + b.amount * (p.pct/100), 0);
+      totalProfitPending += unpaidBills.reduce((s,b) => s + b.amount * (p.pct/100), 0);
+    }
   });
-  return { totalBilled, totalPaid, totalPending };
+  return { totalBilled, totalPaid, totalPending, totalProfitEarned, totalProfitPending };
 }
 
 // ═══ PAGE NAVIGATION ══════════════════════════════════════
@@ -1010,6 +1016,16 @@ function renderHome() {
       <div class="tile-label">Pending</div>
       <div class="tile-val danger">${fmtShort(s.totalPending)}</div>
       <div class="tile-meta">Outstanding amount</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Profit Realized</div>
+      <div class="tile-val profit">${fmtShort(Math.round(s.totalProfitEarned))}</div>
+      <div class="tile-meta">From cleared bills</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Profit Locked In</div>
+      <div class="tile-val business">${fmtShort(Math.round(s.totalProfitPending))}</div>
+      <div class="tile-meta">On unpaid bills</div>
     </div>
   `;
 
@@ -1333,6 +1349,15 @@ function renderAnalytics() {
   const totalPaid = bills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
   const totalPending = bills.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
 
+  let profitEarned=0, profitPending=0;
+  pharmas.forEach(p => {
+    if (p.type === 'profit') {
+      const pb = DB.bills.filter(b => b.pharmaId === p.id);
+      profitEarned += pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount*(p.pct/100),0);
+      profitPending += pb.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount*(p.pct/100),0);
+    }
+  });
+
   document.getElementById('analytics-stat-row').innerHTML = `
     <div class="stat-tile">
       <div class="tile-label">Total Billed</div>
@@ -1345,6 +1370,16 @@ function renderAnalytics() {
     <div class="stat-tile">
       <div class="tile-label">Outstanding</div>
       <div class="tile-val danger">${fmtShort(totalPending)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Profit Realized</div>
+      <div class="tile-val profit">${fmtShort(Math.round(profitEarned))}</div>
+      <div class="tile-meta">From cleared bills</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Profit Locked In</div>
+      <div class="tile-val business">${fmtShort(Math.round(profitPending))}</div>
+      <div class="tile-meta">On unpaid bills</div>
     </div>
   `;
 
