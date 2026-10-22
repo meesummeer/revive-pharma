@@ -729,7 +729,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <input type="hidden" id="eb-id">
     <div class="form-group">
       <label class="form-label">Pharma</label>
-      <select class="form-input" id="eb-pharma"></select>
+      <select class="form-input" id="eb-pharma" onchange="ebRecalc()"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
@@ -741,18 +741,26 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <input class="form-input" type="date" id="eb-date">
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="form-group">
-        <label class="form-label">Amount (TP)</label>
+        <label class="form-label">Total (gross)</label>
+        <input class="form-input" type="number" id="eb-tp" placeholder="0" oninput="ebRecalc()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Discount %</label>
+        <input class="form-input" type="number" id="eb-pct" placeholder="0" oninput="ebRecalc()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Payable</label>
         <input class="form-input" type="number" id="eb-amount" placeholder="0">
       </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="form-input" id="eb-status">
-          <option value="unpaid">Unpaid</option>
-          <option value="paid">Paid</option>
-        </select>
-      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-input" id="eb-status">
+        <option value="unpaid">Unpaid</option>
+        <option value="paid">Paid</option>
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Description</label>
@@ -871,24 +879,25 @@ function getDefaultData() {
     pharmas: [
       { id: 'arcure', name: 'Arcure Pharma', alias: 'Mars Enterprises', type: 'profit', pct: 30 },
       { id: 'truecare', name: 'TrueCare', alias: 'Rapid Pharma', type: 'business', pct: 30 },
-      { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 30 },
+      { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 25 },
       { id: 'auraceutical', name: 'Auraceutical', alias: '', type: 'profit', pct: 30 },
       { id: 'dermcare', name: 'Dermcare', alias: '', type: 'profit', pct: 30 },
       { id: 'gns', name: 'GNS Pharma', alias: '', type: 'profit', pct: 40 },
     ],
     bills: [
-      // Arcure Pharma (Mars Enterprises) - both unpaid
-      { id: 'b1', pharmaId: 'arcure', billNo: '01', date: '2026-07-07', amount: 16250, desc: 'ARCU GLEAM Facewash ×5, ARCUDERM CS Serum ×5', status: 'unpaid' },
-      { id: 'b2', pharmaId: 'arcure', billNo: '02', date: '2026-08-12', amount: 32500, desc: 'ARCU GLEAM Facewash ×10, ARCUDERM CS Serum ×10', status: 'unpaid' },
-      // TrueCare (Rapid Pharma) - 3 paid, 1 unpaid
-      { id: 'b3', pharmaId: 'truecare', billNo: '565114', date: '2026-07-09', amount: 115262, desc: 'Elysion Caps, Glowris Cream, Provillus Hair Spray, Provillus Shampoo, Provillus-T Tab', status: 'paid' },
-      { id: 'b4', pharmaId: 'truecare', billNo: '577462', date: '2026-09-03', amount: 24434, desc: 'Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
-      { id: 'b5', pharmaId: 'truecare', billNo: '567340', date: '2026-07-20', amount: 20551, desc: 'Acelga Face Wash ×3, Provillus Hair Spray ×3, Provillus Shampoo ×3, Provillus-T Tab ×3, Tinzo UK Ointment ×3', status: 'paid' },
-      { id: 'b6', pharmaId: 'truecare', billNo: '577615', date: '2026-09-04', amount: 28257, desc: 'Dermeola Lotion ×5, Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
-      { id: 'b7', pharmaId: 'truecare', billNo: '587810', date: '2026-10-16', amount: 19978, desc: 'Acelga Face Wash ×5, Glowris Cream ×5, Provillus Shampoo ×5', status: 'unpaid' },
-      // Helix (Ascent Enterprises) - unpaid
-      { id: 'b9', pharmaId: 'gns', billNo: '01', date: '2026-10-22', amount: 56900, description: 'Acnoaie Serum ×10, Acnoaie Face Wash ×10, Retegin Body Sol ×5', status: 'unpaid' },
-      { id: 'b8', pharmaId: 'helix', billNo: '7549', date: '2026-07-09', amount: 134452, desc: 'Clariderm Anti Acne Face Wash ×10, Clariderm Anti Acne Serum ×5, Eyeconic Serum ×5, Hydra FX Moisturizing Serum ×5, Solero SC SPF ×5, Solero Tinted SPF ×5, Tressfix Hair Serum ×2+×8, Tressfix Shampoo ×10, Tressfix Tablet ×10, Wynn Brightening Cream ×5, Wynn Brightening Serum ×5', status: 'unpaid' },
+      // Arcure Pharma (Mars Enterprises) — amount = net payable from invoice
+      { id: 'b1', pharmaId: 'arcure', billNo: '01', date: '2026-07-07', amount: 16250, tp: 23500, desc: 'ARCU GLEAM Facewash ×5, ARCUDERM CS Serum ×5', status: 'unpaid' },
+      { id: 'b2', pharmaId: 'arcure', billNo: '02', date: '2026-08-12', amount: 32500, tp: 0, desc: 'ARCU GLEAM Facewash ×10, ARCUDERM CS Serum ×10', status: 'unpaid' },
+      // TrueCare (Rapid Pharma) — NET TOTAL from each invoice
+      { id: 'b3', pharmaId: 'truecare', billNo: '565114', date: '2026-07-09', amount: 115262, tp: 0, desc: 'Elysion Caps, Glowris Cream, Provillus Hair Spray, Provillus Shampoo, Provillus-T Tab', status: 'paid' },
+      { id: 'b4', pharmaId: 'truecare', billNo: '577462', date: '2026-09-03', amount: 24434, tp: 0, desc: 'Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
+      { id: 'b5', pharmaId: 'truecare', billNo: '567340', date: '2026-07-20', amount: 20551, tp: 0, desc: 'Acelga Face Wash ×3, Provillus Hair Spray ×3, Provillus Shampoo ×3, Provillus-T Tab ×3, Tinzo UK Ointment ×3', status: 'paid' },
+      { id: 'b6', pharmaId: 'truecare', billNo: '577615', date: '2026-09-04', amount: 28257, tp: 0, desc: 'Dermeola Lotion ×5, Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
+      { id: 'b7', pharmaId: 'truecare', billNo: '587810', date: '2026-10-16', amount: 19978, tp: 0, desc: 'Acelga Face Wash ×5, Glowris Cream ×5, Provillus Shampoo ×5', status: 'unpaid' },
+      // Helix (Ascent Enterprises) — NET AMOUNT from invoice
+      { id: 'b8', pharmaId: 'helix', billNo: '7549', date: '2026-07-09', amount: 134452, tp: 109658, desc: 'Clariderm Anti Acne Face Wash ×10, Clariderm Anti Acne Serum ×5, Eyeconic Serum ×5, Hydra FX Moisturizing Serum ×5, Solero SC SPF ×5, Solero Tinted SPF ×5, Tressfix Hair Serum ×10, Tressfix Shampoo ×10, Tressfix Tablet ×10, Wynn Brightening Cream ×5, Wynn Brightening Serum ×5', status: 'unpaid' },
+      // GNS Pharma
+      { id: 'b9', pharmaId: 'gns', billNo: '01', date: '2026-10-22', amount: 56900, tp: 0, desc: 'Acnoaie Serum ×10, Acnoaie Face Wash ×10, Retegin Body Sol ×5', status: 'unpaid' },
     ],
     products: [
       // Arcure Pharma
@@ -936,41 +945,22 @@ function getProductsFor(pharmaId) { return DB.products.filter(p => p.pharmaId ==
 
 function pharmaStats(pharmaId) {
   const bills = getBillsFor(pharmaId);
-  const p = getPharma(pharmaId);
-  // amount stored = TP (trade price, the full billed amount before any discount)
-  // Profit pharmas: we pay TP × (1 - pct/100)  e.g. 40% off → pay 60% of TP
-  // Business pharmas: we pay TP × 95% (5% discount), 20-25% of TP → business credit
-  function billPayable(b) {
-    if (!p) return b.amount;
-    if (p.type === 'business') return b.amount * 0.95;
-    return b.amount * (1 - p.pct / 100);
-  }
-  const totalTP        = bills.reduce((s,b) => s + b.amount, 0);
-  const totalPayable   = bills.reduce((s,b) => s + billPayable(b), 0);
-  const totalTPPaid    = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
-  const totalTPPending = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + b.amount, 0);
-  const totalPaid      = bills.filter(b => b.status === 'paid').reduce((s,b) => s + billPayable(b), 0);
-  const totalPending   = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + billPayable(b), 0);
-  // Business credit: the portion of TP that accumulates as 12-month credit (pct - 5)% of TP
-  const businessCredit = p?.type === 'business' ? totalTP * ((p.pct - 5) / 100) : 0;
-  // Profit: the discount = margin (pct% of TP)
-  const profit = p?.type === 'profit'
-    ? totalTP * (p.pct / 100)
-    : totalTP * (p?.pct / 100 - 0.05); // business: credit portion is the gain
-  return { totalBilled: totalTP, totalTP, totalPayable, totalPaid, totalPending, totalTPPaid, totalTPPending, businessCredit, profit };
+  // amount = what we actually pay (net payable from invoice)
+  const totalPayable = bills.reduce((s,b) => s + b.amount, 0);
+  const totalPaid    = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
+  const totalPending = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + b.amount, 0);
+  return { totalPayable, totalPaid, totalPending };
 }
 
 function allStats() {
-  let totalBilled=0, totalPaid=0, totalPending=0, totalProfit=0, totalBusiness=0;
+  let totalBilled=0, totalPaid=0, totalPending=0;
   DB.pharmas.forEach(p => {
     const s = pharmaStats(p.id);
-    totalBilled += s.totalBilled;
+    totalBilled += s.totalPayable;
     totalPaid += s.totalPaid;
     totalPending += s.totalPending;
-    totalProfit += s.profit;
-    totalBusiness += s.businessCredit;
   });
-  return { totalBilled, totalPaid, totalPending, totalProfit, totalBusiness };
+  return { totalBilled, totalPaid, totalPending };
 }
 
 // ═══ PAGE NAVIGATION ══════════════════════════════════════
@@ -1006,16 +996,6 @@ function renderHome() {
       <div class="tile-val danger">${fmtShort(s.totalPending)}</div>
       <div class="tile-meta">Outstanding amount</div>
     </div>
-    <div class="stat-tile">
-      <div class="tile-label">Total Profit / Saving</div>
-      <div class="tile-val profit">${fmtShort(s.totalProfit)}</div>
-      <div class="tile-meta">Profit + business savings</div>
-    </div>
-    <div class="stat-tile">
-      <div class="tile-label">Business Credit</div>
-      <div class="tile-val business">${fmtShort(s.totalBusiness)}</div>
-      <div class="tile-meta">12-month accumulation</div>
-    </div>
   `;
 
   const businessPharmas = DB.pharmas.filter(p => p.type === 'business');
@@ -1032,36 +1012,28 @@ function renderHome() {
 
 function pharmaCard(p) {
   const s = pharmaStats(p.id);
-  const creditLine = p.type === 'business'
-    ? `<div class="pharma-stat-item"><div class="psi-label">Business Credit</div><div class="psi-val business">${fmtShort(s.businessCredit)}</div></div>`
-    : `<div class="pharma-stat-item"><div class="psi-label">Profit</div><div class="psi-val profit">${fmtShort(s.profit)}</div></div>`;
-  const discountLabel = p.type === 'business'
-    ? `5% discount · ${p.pct - 5}% builds credit`
-    : `${p.pct}% discount off TP`;
   return `
     <div class="pharma-card" onclick="showPage('billing')">
       <div class="pharma-card-head">
         <div>
           <div class="pharma-name">${esc(p.name)}</div>
           ${p.alias ? `<div class="pharma-alias">billed as ${esc(p.alias)}</div>` : ''}
-          <div class="pharma-alias" style="color:var(--accent);margin-top:2px">${discountLabel}</div>
         </div>
-        <span class="type-badge ${p.type}">${p.type}</span>
+        <span class="type-badge ${p.type||'profit'}" style="font-size:12px;padding:4px 8px">${p.pct}%</span>
       </div>
       <div class="pharma-stats">
         <div class="pharma-stat-item">
-          <div class="psi-label">TP (Trade Price)</div>
-          <div class="psi-val">${fmtShort(s.totalTP)}</div>
+          <div class="psi-label">Total Billed</div>
+          <div class="psi-val">${fmtShort(s.totalPayable)}</div>
         </div>
         <div class="pharma-stat-item">
-          <div class="psi-label">We Pay</div>
-          <div class="psi-val profit">${fmtShort(s.totalPayable)}</div>
+          <div class="psi-label">Paid</div>
+          <div class="psi-val profit">${fmtShort(s.totalPaid)}</div>
         </div>
         <div class="pharma-stat-item">
           <div class="psi-label">Pending</div>
-          <div class="psi-val pending">${fmtShort(s.totalPending)}</div>
+          <div class="psi-val" style="color:var(--danger)">${fmtShort(s.totalPending)}</div>
         </div>
-        ${creditLine}
       </div>
     </div>`;
 }
@@ -1081,52 +1053,38 @@ function renderBilling() {
 }
 
 function renderBillHeaderCards() {
-  // amount in DB = TP (full trade price). payable = what we actually pay after discount.
-  let totalTP=0, totalPayable=0, paidPayable=0, pendingTP=0, pendingPayable=0;
+  let totalAll=0, totalPaid=0, totalPending=0;
   DB.bills.forEach(b => {
-    const p = getPharma(b.pharmaId);
-    const payable = billPayableFor(b, p);
-    totalTP += b.amount; totalPayable += payable;
-    if (b.status === 'paid') paidPayable += payable;
-    else { pendingTP += b.amount; pendingPayable += payable; }
+    totalAll += b.amount;
+    if (b.status === 'paid') totalPaid += b.amount;
+    else totalPending += b.amount;
   });
 
   let perPharmaHTML = '';
   DB.pharmas.forEach(p => {
-    const unpaidBills = getBillsFor(p.id).filter(b=>b.status==='unpaid');
-    const pendTP  = unpaidBills.reduce((s,b)=>s+b.amount,0);
-    const pendPay = unpaidBills.reduce((s,b)=>s+billPayableFor(b,p),0);
-    if (pendTP > 0) perPharmaHTML += `
+    const pending = getBillsFor(p.id).filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    if (pending > 0) perPharmaHTML += `
       <div class="bill-header-card">
         <div class="bhc-label">${esc(p.name)} Pending</div>
-        <div class="bhc-val red">${fmt(pendPay)}</div>
-        <div style="font-size:11px;color:var(--fg3);margin-top:2px">of TP ${fmt(pendTP)}</div>
+        <div class="bhc-val red">${fmt(pending)}</div>
       </div>`;
   });
 
   document.getElementById('bill-header-cards').innerHTML = `
     <div class="bill-header-card">
-      <div class="bhc-label">Total Pending (Payable)</div>
-      <div class="bhc-val red">${fmt(pendingPayable)}</div>
-      <div style="font-size:11px;color:var(--fg3);margin-top:2px">of TP ${fmt(pendingTP)}</div>
+      <div class="bhc-label">Total Pending</div>
+      <div class="bhc-val red">${fmt(totalPending)}</div>
     </div>
     <div class="bill-header-card">
       <div class="bhc-label">Total Paid</div>
-      <div class="bhc-val green">${fmt(paidPayable)}</div>
+      <div class="bhc-val green">${fmt(totalPaid)}</div>
     </div>
     <div class="bill-header-card">
-      <div class="bhc-label">Total TP Billed</div>
-      <div class="bhc-val">${fmt(totalTP)}</div>
-      <div style="font-size:11px;color:var(--fg3);margin-top:2px">we pay ${fmt(totalPayable)}</div>
+      <div class="bhc-label">Total Billed</div>
+      <div class="bhc-val">${fmt(totalAll)}</div>
     </div>
     ${perPharmaHTML}
   `;
-}
-
-function billPayableFor(b, p) {
-  if (!p) return b.amount;
-  if (p.type === 'business') return b.amount * 0.95;
-  return b.amount * (1 - p.pct / 100);
 }
 
 function renderBillsTable() {
@@ -1144,19 +1102,15 @@ function renderBillsTable() {
   }
   tbody.innerHTML = bills.map(b => {
     const p = getPharma(b.pharmaId);
-    const discLabel = p ? (p.type === 'business' ? 'pay 5%' : `${p.pct}% off`) : '';
     return `<tr>
       <td>
         <div class="fw-600">${esc(p?.name||'?')}</div>
         ${p?.alias ? `<div class="text-xs">${esc(p.alias)}</div>` : ''}
-        ${discLabel ? `<div class="text-xs" style="color:var(--accent)">${discLabel}</div>` : ''}
+        ${p ? `<div class="text-xs" style="color:var(--accent)">${p.pct}%</div>` : ''}
       </td>
       <td class="td-mono">${esc(b.billNo||'—')}</td>
       <td class="td-mono">${fmtDate(b.date)}</td>
-      <td class="td-mono">
-        <div class="fw-600">${fmt(billPayableFor(b, p))}</div>
-        <div class="text-xs" style="color:var(--fg3)">TP ${fmt(b.amount)}</div>
-      </td>
+      <td class="td-mono"><div class="fw-600">${fmt(b.amount)}</div></td>
       <td style="max-width:220px;word-break:break-word">${esc(b.desc||b.description||'—')}</td>
       <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -1192,18 +1146,28 @@ async function markUnpaid(id) {
   saveData(DB); renderBilling(); showToast('Marked unpaid');
 }
 
+function ebRecalc() {
+  const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
+  const pct = parseFloat(document.getElementById('eb-pct').value) || 0;
+  if (tp > 0 && pct > 0) {
+    document.getElementById('eb-amount').value = Math.round(tp * (1 - pct / 100));
+  }
+}
+
 function openEditBill(id) {
   const b = DB.bills.find(b => b.id === id);
   if (!b) return;
-  // Populate pharma dropdown
   const sel = document.getElementById('eb-pharma');
   sel.innerHTML = DB.pharmas.map(p => `<option value="${p.id}" ${p.id===b.pharmaId?'selected':''}>${esc(p.name)}</option>`).join('');
+  const ph = getPharma(b.pharmaId);
   document.getElementById('eb-id').value = b.id;
   document.getElementById('eb-billno').value = b.billNo || '';
   document.getElementById('eb-date').value = b.date || '';
+  document.getElementById('eb-tp').value = b.tp || '';
+  document.getElementById('eb-pct').value = ph?.pct || '';
   document.getElementById('eb-amount').value = b.amount || '';
   document.getElementById('eb-status').value = b.status || 'unpaid';
-  document.getElementById('eb-desc').value = b.desc || '';
+  document.getElementById('eb-desc').value = b.desc || b.description || '';
   openModal('modal-edit-bill');
 }
 
@@ -1214,6 +1178,7 @@ async function saveEditBill() {
   b.pharmaId = document.getElementById('eb-pharma').value;
   b.billNo   = document.getElementById('eb-billno').value.trim();
   b.date     = document.getElementById('eb-date').value;
+  b.tp       = parseFloat(document.getElementById('eb-tp').value) || 0;
   b.amount   = parseFloat(document.getElementById('eb-amount').value) || 0;
   b.status   = document.getElementById('eb-status').value;
   b.desc     = document.getElementById('eb-desc').value.trim();
@@ -1347,16 +1312,9 @@ function renderAnalytics() {
   const totalPaid = bills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
   const totalPending = bills.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
 
-  let totalProfit = 0, totalBusiness = 0;
-  pharmas.forEach(p => {
-    const s = pharmaStats(p.id);
-    if (p.type === 'profit') totalProfit += s.profit;
-    if (p.type === 'business') totalBusiness += s.businessCredit;
-  });
-
   document.getElementById('analytics-stat-row').innerHTML = `
     <div class="stat-tile">
-      <div class="tile-label">Total Revenue</div>
+      <div class="tile-label">Total Billed</div>
       <div class="tile-val">${fmtShort(totalBilled)}</div>
     </div>
     <div class="stat-tile">
@@ -1367,41 +1325,26 @@ function renderAnalytics() {
       <div class="tile-label">Outstanding</div>
       <div class="tile-val danger">${fmtShort(totalPending)}</div>
     </div>
-    <div class="stat-tile">
-      <div class="tile-label">Profit Generated</div>
-      <div class="tile-val profit">${fmtShort(totalProfit)}</div>
-    </div>
-    <div class="stat-tile">
-      <div class="tile-label">Business Credit</div>
-      <div class="tile-val business">${fmtShort(totalBusiness)}</div>
-    </div>
   `;
 
-  // Business accumulation (12-month)
-  const now = new Date();
-  const cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 1);
-  const businessPharmas = pharmas.filter(p => p.type === 'business');
+  // Per-pharma pending breakdown in analytics
   let accumHTML = '';
-  if (businessPharmas.length) {
-    businessPharmas.forEach(p => {
-      const recentBills = getBillsFor(p.id).filter(b => b.status === 'paid' && new Date(b.date) >= cutoff);
-      const credit = recentBills.reduce((s,b) => s + b.amount * ((p.pct - 5)/100), 0);
-      const totalPaidAll = getBillsFor(p.id).filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
-      const maxCredit = totalPaidAll * ((p.pct - 5)/100);
-      const pct = maxCredit > 0 ? Math.min(100, (credit/maxCredit)*100) : 0;
+  pharmas.forEach(p => {
+    const pb = getBillsFor(p.id);
+    const pending = pb.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    if (pending > 0) {
       accumHTML += `
         <div class="business-bar">
           <div class="bb-label">
             <span>${esc(p.name)}</span>
-            <span style="color:var(--business);font-weight:700">${fmt(credit)}</span>
+            <span style="color:var(--danger);font-weight:700">${fmt(pending)}</span>
           </div>
-          <div class="bb-track"><div class="bb-fill" style="width:${pct}%"></div></div>
-          <div class="bb-meta">${p.pct}% discount structure · 5% paid · ${p.pct-5}% credit rate · 12-month window</div>
+          <div class="bb-track"><div class="bb-fill" style="width:100%;background:var(--danger)"></div></div>
+          <div class="bb-meta">${p.pct}% terms</div>
         </div>`;
-    });
-  } else {
-    accumHTML = '<div class="text-sm" style="padding:12px 0">No business pharmas selected</div>';
-  }
+    }
+  });
+  if (!accumHTML) accumHTML = '<div class="text-sm" style="padding:12px 0">No pending bills</div>';
   document.getElementById('business-accum-content').innerHTML = accumHTML;
 
   // Bills breakdown
@@ -1415,7 +1358,7 @@ function renderAnalytics() {
         <div style="margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px">
             <span style="font-weight:600;font-size:13px">${esc(p.name)}</span>
-            <span class="type-badge ${p.type}" style="font-size:9px">${p.type}</span>
+            <span class="type-badge profit" style="font-size:9px">${p.pct}%</span>
           </div>
           <div style="display:flex;gap:16px;font-size:12px;color:var(--fg2)">
             <span>✓ Paid: <strong style="color:var(--paid)">${fmt(paid)}</strong></span>
