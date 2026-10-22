@@ -831,6 +831,7 @@ function getDefaultData() {
       { id: 'helix', name: 'Helix', alias: 'Ascent Enterprises', type: 'business', pct: 30 },
       { id: 'auraceutical', name: 'Auraceutical', alias: '', type: 'profit', pct: 30 },
       { id: 'dermcare', name: 'Dermcare', alias: '', type: 'profit', pct: 30 },
+      { id: 'gns', name: 'GNS Pharma', alias: '', type: 'profit', pct: 40 },
     ],
     bills: [
       // Arcure Pharma (Mars Enterprises) - both unpaid
@@ -843,6 +844,7 @@ function getDefaultData() {
       { id: 'b6', pharmaId: 'truecare', billNo: '577615', date: '2026-09-04', amount: 28257, desc: 'Dermeola Lotion ×5, Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
       { id: 'b7', pharmaId: 'truecare', billNo: '587810', date: '2026-10-16', amount: 19978, desc: 'Acelga Face Wash ×5, Glowris Cream ×5, Provillus Shampoo ×5', status: 'unpaid' },
       // Helix (Ascent Enterprises) - unpaid
+      { id: 'b9', pharmaId: 'gns', billNo: '01', date: '2026-10-22', amount: 56900, description: 'Acnoaie Serum ×10, Acnoaie Face Wash ×10, Retegin Body Sol ×5', status: 'unpaid' },
       { id: 'b8', pharmaId: 'helix', billNo: '7549', date: '2026-07-09', amount: 134452, desc: 'Clariderm Anti Acne Face Wash ×10, Clariderm Anti Acne Serum ×5, Eyeconic Serum ×5, Hydra FX Moisturizing Serum ×5, Solero SC SPF ×5, Solero Tinted SPF ×5, Tressfix Hair Serum ×2+×8, Tressfix Shampoo ×10, Tressfix Tablet ×10, Wynn Brightening Cream ×5, Wynn Brightening Serum ×5', status: 'unpaid' },
     ],
     products: [
@@ -866,6 +868,9 @@ function getDefaultData() {
       { id: 'p14', pharmaId: 'helix', name: 'Eyeconic Serum 20ml', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
       { id: 'p15', pharmaId: 'helix', name: 'Hydra FX Moisturizing Serum', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
       { id: 'p16', pharmaId: 'helix', name: 'Solero SC SPF40/P++ 30gm', qty: 0, total: 5, lowAt: 1, dateAdded: '2026-07-09' },
+      { id: 'p17', pharmaId: 'gns', name: 'Acnoaie Serum', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-10-22' },
+      { id: 'p18', pharmaId: 'gns', name: 'Acnoaie Face Wash', qty: 10, total: 10, lowAt: 3, dateAdded: '2026-10-22' },
+      { id: 'p19', pharmaId: 'gns', name: 'Retegin Body Sol', qty: 5, total: 5, lowAt: 2, dateAdded: '2026-10-22' },
     ]
   };
 }
