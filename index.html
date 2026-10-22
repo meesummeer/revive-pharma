@@ -744,15 +744,15 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="form-group">
         <label class="form-label">Total (gross)</label>
-        <input class="form-input" type="number" id="eb-tp" placeholder="0" oninput="ebRecalc()">
+        <input class="form-input" type="number" id="eb-tp" placeholder="0" oninput="ebRecalcFromTP()">
       </div>
       <div class="form-group">
         <label class="form-label">Discount %</label>
-        <input class="form-input" type="number" id="eb-pct" placeholder="0" oninput="ebRecalc()">
+        <input class="form-input" type="number" id="eb-pct" placeholder="0" oninput="ebRecalcFromTP()">
       </div>
       <div class="form-group">
         <label class="form-label">Payable</label>
-        <input class="form-input" type="number" id="eb-amount" placeholder="0">
+        <input class="form-input" type="number" id="eb-amount" placeholder="0" oninput="ebRecalcFromAmt()">
       </div>
     </div>
     <div class="form-group">
@@ -836,7 +836,7 @@ async function loadFromSupabase() {
         const seed = seedPharmas.find(s => s.id === p.id) || {};
         return { id: p.id, name: p.name, alias: p.alias||'', type: p.type, pct: p.pct, ...(seed.helixDeal ? { helixDeal: seed.helixDeal } : {}) };
       });
-      DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id, billNo: b.bill_no||'', date: b.date, amount: Number(b.amount), desc: b.description||'', status: b.status }));
+      DB.bills = bills.map(b => ({ id: b.id, pharmaId: b.pharma_id||b.pharmaId, billNo: b.bill_no||b.billNo||'', date: b.date, amount: Number(b.amount), tp: Number(b.tp||0), desc: b.description||b.desc||'', status: b.status }));
       DB.products = products.map(p => {
         const seed = getDefaultData().products.find(s => s.id === p.id) || {};
         return { id: p.id, pharmaId: p.pharma_id, name: p.name, qty: p.qty, total: p.total, lowAt: p.low_at, dateAdded: p.date_added, mrp: seed.mrp||0, cost: seed.cost||0 };
@@ -902,17 +902,17 @@ function getDefaultData() {
     bills: [
       // Arcure Pharma (Mars Enterprises) — amount = net payable from invoice
       { id: 'b1', pharmaId: 'arcure', billNo: '01', date: '2026-07-07', amount: 16250, tp: 23500, desc: 'ARCU GLEAM Facewash ×5, ARCUDERM CS Serum ×5', status: 'unpaid' },
-      { id: 'b2', pharmaId: 'arcure', billNo: '02', date: '2026-08-12', amount: 32500, tp: 0, desc: 'ARCU GLEAM Facewash ×10, ARCUDERM CS Serum ×10', status: 'unpaid' },
+      { id: 'b2', pharmaId: 'arcure', billNo: '02', date: '2026-08-12', amount: 32900, tp: 47000, desc: 'ARCU GLEAM Facewash ×10, ARCUDERM CS Serum ×10', status: 'unpaid' },
       // TrueCare (Rapid Pharma) — NET TOTAL from each invoice
-      { id: 'b3', pharmaId: 'truecare', billNo: '565114', date: '2026-07-09', amount: 115262, tp: 0, desc: 'Elysion Caps, Glowris Cream, Provillus Hair Spray, Provillus Shampoo, Provillus-T Tab', status: 'paid' },
-      { id: 'b4', pharmaId: 'truecare', billNo: '577462', date: '2026-09-03', amount: 24434, tp: 0, desc: 'Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
-      { id: 'b5', pharmaId: 'truecare', billNo: '567340', date: '2026-07-20', amount: 20551, tp: 0, desc: 'Acelga Face Wash ×3, Provillus Hair Spray ×3, Provillus Shampoo ×3, Provillus-T Tab ×3, Tinzo UK Ointment ×3', status: 'paid' },
-      { id: 'b6', pharmaId: 'truecare', billNo: '577615', date: '2026-09-04', amount: 28257, tp: 0, desc: 'Dermeola Lotion ×5, Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
-      { id: 'b7', pharmaId: 'truecare', billNo: '587810', date: '2026-10-16', amount: 19978, tp: 0, desc: 'Acelga Face Wash ×5, Glowris Cream ×5, Provillus Shampoo ×5', status: 'unpaid' },
+      { id: 'b3', pharmaId: 'truecare', billNo: '565114', date: '2026-07-09', amount: 115262, tp: 121328, desc: 'Elysion Caps, Glowris Cream, Provillus Hair Spray, Provillus Shampoo, Provillus-T Tab', status: 'paid' },
+      { id: 'b4', pharmaId: 'truecare', billNo: '577462', date: '2026-09-03', amount: 24434, tp: 25720, desc: 'Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
+      { id: 'b5', pharmaId: 'truecare', billNo: '567340', date: '2026-07-20', amount: 20551, tp: 21633, desc: 'Acelga Face Wash ×3, Provillus Hair Spray ×3, Provillus Shampoo ×3, Provillus-T Tab ×3, Tinzo UK Ointment ×3', status: 'paid' },
+      { id: 'b6', pharmaId: 'truecare', billNo: '577615', date: '2026-09-04', amount: 28257, tp: 29744, desc: 'Dermeola Lotion ×5, Glowris Cream ×5, Nutiplex Tab ×5, Provillus-T Tab ×5', status: 'paid' },
+      { id: 'b7', pharmaId: 'truecare', billNo: '587810', date: '2026-10-16', amount: 19829, tp: 20873, desc: 'Acelga Face Wash ×5, Glowris Cream ×5, Provillus Shampoo ×5', status: 'unpaid' },
       // Helix (Ascent Enterprises) — NET AMOUNT from invoice
-      { id: 'b8', pharmaId: 'helix', billNo: '7549', date: '2026-07-09', amount: 134452, tp: 109658, desc: 'Clariderm Anti Acne Face Wash ×10, Clariderm Anti Acne Serum ×5, Eyeconic Serum ×5, Hydra FX Moisturizing Serum ×5, Solero SC SPF ×5, Solero Tinted SPF ×5, Tressfix Hair Serum ×10, Tressfix Shampoo ×10, Tressfix Tablet ×10, Wynn Brightening Cream ×5, Wynn Brightening Serum ×5', status: 'unpaid' },
+      { id: 'b8', pharmaId: 'helix', billNo: '7549', date: '2026-07-09', amount: 134452, tp: 134452, desc: 'Clariderm Anti Acne Face Wash ×10, Clariderm Anti Acne Serum ×5, Eyeconic Serum ×5, Hydra FX Moisturizing Serum ×5, Solero SC SPF ×5, Solero Tinted SPF ×5, Tressfix Hair Serum ×10, Tressfix Shampoo ×10, Tressfix Tablet ×10, Wynn Brightening Cream ×5, Wynn Brightening Serum ×5', status: 'unpaid' },
       // GNS Pharma
-      { id: 'b9', pharmaId: 'gns', billNo: '01', date: '2026-10-22', amount: 56900, tp: 0, desc: 'Acnoaie Serum ×10, Acnoaie Face Wash ×10, Retegin Body Sol ×5', status: 'unpaid' },
+      { id: 'b9', pharmaId: 'gns', billNo: '01', date: '2026-10-22', amount: 35000, tp: 58333, desc: 'Acnoaie Serum ×10, Acnoaie Face Wash ×10, Retegin Body Sol ×5', status: 'unpaid' },
     ],
     products: [
       // Arcure Pharma (Mars Enterprises) — TP=cost, MRP from invoice
@@ -1177,13 +1177,38 @@ async function markUnpaid(id) {
   saveData(DB); renderBilling(); showToast('Marked unpaid');
 }
 
-function ebRecalc() {
+function ebRecalcFromTP() {
   const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
   const pct = parseFloat(document.getElementById('eb-pct').value) || 0;
-  if (tp > 0 && pct > 0) {
+  if (tp > 0 && pct >= 0) {
     document.getElementById('eb-amount').value = Math.round(tp * (1 - pct / 100));
   }
 }
+function ebRecalcFromPct() {
+  const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
+  const amt = parseFloat(document.getElementById('eb-amount').value) || 0;
+  if (tp > 0 && amt >= 0) {
+    document.getElementById('eb-pct').value = parseFloat(((1 - amt / tp) * 100).toFixed(2));
+  }
+}
+function ebRecalcFromAmt() {
+  const tp  = parseFloat(document.getElementById('eb-tp').value) || 0;
+  const pct = parseFloat(document.getElementById('eb-pct').value) || 0;
+  if (pct >= 0 && tp <= 0) {
+    // recalc tp from amount + pct
+    const amt = parseFloat(document.getElementById('eb-amount').value) || 0;
+    if (amt > 0 && pct >= 0 && pct < 100) {
+      document.getElementById('eb-tp').value = Math.round(amt / (1 - pct / 100));
+    }
+  } else if (tp > 0) {
+    // recalc pct from tp + amount
+    const amt = parseFloat(document.getElementById('eb-amount').value) || 0;
+    if (amt >= 0) {
+      document.getElementById('eb-pct').value = parseFloat(((1 - amt / tp) * 100).toFixed(2));
+    }
+  }
+}
+function ebRecalc() { ebRecalcFromTP(); }
 
 function openEditBill(id) {
   const b = DB.bills.find(b => b.id === id);
@@ -1216,7 +1241,7 @@ async function saveEditBill() {
   if (SB_READY) {
     const { error } = await sb.from('bills').update({
       pharma_id: b.pharmaId, bill_no: b.billNo, date: b.date,
-      amount: b.amount, status: b.status, description: b.desc
+      amount: b.amount, tp: b.tp, status: b.status, description: b.desc
     }).eq('id', id);
     if (error) { showToast('Save failed', 'err'); return; }
   }
@@ -1496,9 +1521,10 @@ async function addBill() {
   const date = document.getElementById('mb-date').value;
   const desc = document.getElementById('mb-desc').value.trim();
   const status = document.getElementById('mb-status').value;
-  const row = { id, pharmaId, billNo, date, amount, desc, status };
+  const tp = parseFloat(document.getElementById('mb-tp')?.value) || 0;
+  const row = { id, pharmaId, billNo, date, amount, tp, desc, status };
   if (SB_READY) {
-    const { error } = await sb.from('bills').insert({ id, pharma_id: pharmaId, bill_no: billNo, date, amount, description: desc, status });
+    const { error } = await sb.from('bills').insert({ id, pharma_id: pharmaId, bill_no: billNo, date, amount, tp, description: desc, status });
     if (error) { showToast('Save failed', 'err'); return; }
   }
   DB.bills.push(row);
