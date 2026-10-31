@@ -1938,7 +1938,9 @@ function openInvoiceModal(id) {
   document.getElementById('inv-modal-title').textContent = inv ? 'Edit Invoice' : 'Add Invoice';
   document.getElementById('mi-save').textContent = inv ? 'Save Changes' : 'Add Invoice';
   document.getElementById('mi-id').value = inv ? inv.id : '';
-  document.getElementById('mi-invoice-id').value = inv ? inv.invoiceId : '';
+  // New invoices get the next number after the highest numeric ID on file (still editable)
+  const maxId = (DB.invoices || []).reduce((m, i) => Math.max(m, parseInt(i.invoiceId) || 0), 0);
+  document.getElementById('mi-invoice-id').value = inv ? inv.invoiceId : (maxId ? String(maxId + 1) : '');
   document.getElementById('mi-date').value = inv ? inv.date : new Date().toISOString().slice(0,10);
   document.getElementById('mi-patient').value = inv ? inv.patientName : '';
   document.getElementById('mi-products').value = inv ? inv.products : '';
