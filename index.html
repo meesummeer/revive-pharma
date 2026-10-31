@@ -432,6 +432,25 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .empty-state .es-sub { font-size: 13px; }
 
 /* ─── RESPONSIVE ─────────────────────────────────────────── */
+/* ─── BULK SELECTION ─────────────────────────────────────── */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--accent-light);
+  border: 1px solid var(--accent-dim);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+}
+.bulk-bar[hidden] { display: none; }
+.bulk-count { font-size: 13px; font-weight: 600; color: var(--accent); margin-right: auto; }
+.th-check, .td-check { width: 36px; padding-right: 0 !important; }
+.row-check { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
+tbody tr.row-selected td { background: var(--accent-light); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ─── LOGIN ──────────────────────────────────────────────── */
 .login-screen {
   position: fixed;
@@ -701,12 +720,19 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <select class="form-control" id="inv-filter-status" onchange="renderInvoicesPage()" style="width:auto;min-width:130px">
             <option value="">All Status</option>
           </select>
+          <button class="btn btn-sm btn-danger" id="inv-delete-all" onclick="confirmDeleteAllInvoices()" style="margin-left:auto">Delete All</button>
         </div>
         <div class="stat-row" id="inv-stat-row" style="margin-bottom:20px"></div>
+        <div class="bulk-bar" id="inv-bulk-bar" hidden>
+          <span class="bulk-count" id="inv-bulk-count"></span>
+          <button class="btn btn-sm btn-danger" onclick="confirmDeleteSelectedInvoices()">Delete Selected</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearInvoiceSelection()">Clear Selection</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th class="th-check"><input type="checkbox" class="row-check" id="inv-check-all" onchange="toggleAllInvoices(this.checked)" aria-label="Select all visible invoices"></th>
                 <th>Invoice ID</th>
                 <th>Date</th>
                 <th>Patient Name</th>
@@ -961,6 +987,18 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-invoice')">Cancel</button>
       <button class="btn btn-primary" id="mi-save" onclick="saveInvoice()">Add Invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal (bulk invoice deletes) -->
+<div class="modal-overlay" id="modal-confirm-delete">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Confirm Delete</div>
+    <div id="confirm-delete-msg" style="font-size:14px;color:var(--fg2);line-height:1.5"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm-delete')">Cancel</button>
+      <button class="btn" id="confirm-delete-btn" style="background:var(--danger);color:#fff" onclick="runConfirmedDelete()">Delete</button>
     </div>
   </div>
 </div>
@@ -1787,12 +1825,20 @@ function renderInvoicesPage() {
     </div>
   `;
 
+  // Selection only ever covers rows on screen, so a filter change drops hidden ones
+  invVisibleIds = rows.map(i => i.id);
+  const visible = new Set(invVisibleIds);
+  invSelected.forEach(id => { if (!visible.has(id)) invSelected.delete(id); });
+  document.getElementById('inv-delete-all').disabled = !(DB.invoices || []).length;
+
   const tbody = document.getElementById('invoices-tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📄</div><div class="es-title">No invoices found</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📄</div><div class="es-title">No invoices found</div></div></td></tr>`;
+    syncInvoiceSelectionUI();
     return;
   }
-  tbody.innerHTML = rows.map(i => `<tr>
+  tbody.innerHTML = rows.map(i => `<tr data-id="${i.id}"${invSelected.has(i.id) ? ' class="row-selected"' : ''}>
+      <td class="td-check"><input type="checkbox" class="row-check" ${invSelected.has(i.id) ? 'checked' : ''} onchange="toggleInvoiceRow('${i.id}', this.checked)" aria-label="Select invoice"></td>
       <td class="td-mono fw-600">${esc(i.invoiceId) || '—'}</td>
       <td class="td-mono" style="white-space:nowrap">${fmtDate(i.date)}</td>
       <td>${esc(i.patientName) || '—'}</td>
@@ -1806,6 +1852,81 @@ function renderInvoicesPage() {
         </div>
       </td>
     </tr>`).join('');
+  syncInvoiceSelectionUI();
+}
+
+// ─── Bulk selection + delete ───
+let invSelected = new Set();   // ids of checked rows (always a subset of the visible rows)
+let invVisibleIds = [];        // ids currently rendered, in table order
+let invPendingDelete = null;   // async fn the confirm modal runs
+
+function syncInvoiceSelectionUI() {
+  const n = invSelected.size;
+  document.getElementById('inv-bulk-bar').hidden = n === 0;
+  document.getElementById('inv-bulk-count').textContent = `${n} selected`;
+  const all = document.getElementById('inv-check-all');
+  all.checked = n > 0 && n === invVisibleIds.length;
+  all.indeterminate = n > 0 && n < invVisibleIds.length;
+  all.disabled = !invVisibleIds.length;
+}
+
+function toggleInvoiceRow(id, checked) {
+  if (checked) invSelected.add(id); else invSelected.delete(id);
+  document.querySelector(`#invoices-tbody tr[data-id="${id}"]`)?.classList.toggle('row-selected', checked);
+  syncInvoiceSelectionUI();
+}
+
+function toggleAllInvoices(checked) {
+  invSelected = new Set(checked ? invVisibleIds : []);
+  renderInvoicesPage();
+}
+
+function clearInvoiceSelection() { toggleAllInvoices(false); }
+
+function openDeleteConfirm(message, run) {
+  invPendingDelete = run;
+  document.getElementById('confirm-delete-msg').textContent = message;
+  const btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = false; btn.textContent = 'Delete';
+  openModal('modal-confirm-delete');
+}
+
+async function runConfirmedDelete() {
+  if (!invPendingDelete) return;
+  const btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  const run = invPendingDelete;
+  invPendingDelete = null;
+  const msg = await run();
+  // Whatever happened, show what Supabase now holds
+  await loadInvoices();
+  invSelected.clear();
+  closeModal('modal-confirm-delete');
+  renderInvoices();
+  if (msg) showToast(msg.text, msg.type);
+}
+
+function confirmDeleteSelectedInvoices() {
+  const ids = [...invSelected];
+  if (!ids.length) return;
+  openDeleteConfirm(`Delete ${ids.length} invoice${ids.length === 1 ? '' : 's'}? This cannot be undone.`, async () => {
+    // Chunk so a large selection doesn't overflow the request URL
+    for (let k = 0; k < ids.length; k += 200) {
+      const { error } = await sb.from('hcloud_invoices').delete().in('id', ids.slice(k, k + 200));
+      if (error) { console.error('Bulk delete error', error); return { text: 'Delete failed', type: 'err' }; }
+    }
+    return { text: `${ids.length} invoice${ids.length === 1 ? '' : 's'} deleted` };
+  });
+}
+
+function confirmDeleteAllInvoices() {
+  const total = (DB.invoices || []).length;
+  if (!total) return;
+  openDeleteConfirm(`Delete ALL ${total} invoices? This cannot be undone.`, async () => {
+    const { error } = await sb.from('hcloud_invoices').delete().neq('id', '');
+    if (error) { console.error('Delete all error', error); return { text: 'Delete failed', type: 'err' }; }
+    return { text: 'All invoices deleted' };
+  });
 }
 
 function openInvoiceModal(id) {
