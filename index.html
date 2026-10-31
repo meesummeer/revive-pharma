@@ -508,6 +508,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <button class="nav-item" data-page="billing" onclick="showPage('billing')">
       <span class="nav-icon">🧾</span> Billing
     </button>
+    <button class="nav-item" data-page="invoices" onclick="showPage('invoices')">
+      <span class="nav-icon">📄</span> Invoices
+    </button>
     <button class="nav-item" data-page="stock" onclick="showPage('stock')">
       <span class="nav-icon">📦</span> Stock
     </button>
@@ -639,6 +642,44 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <tr><th>Pharma</th><th>Date</th><th>Amount</th><th>Type</th><th>Status</th></tr>
             </thead>
             <tbody id="analytics-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INVOICES PAGE ═══════════════════════════════════ -->
+    <div class="page" id="page-invoices">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Invoices</div>
+          <div class="page-sub">Patient invoices from HealthCloud</div>
+        </div>
+        <button class="btn btn-primary" onclick="openInvoiceModal()">+ Add Invoice</button>
+      </div>
+      <div class="page-body">
+        <div class="filter-bar">
+          <select class="form-control" id="inv-filter-month" onchange="renderInvoicesPage()">
+            <option value="">All Months</option>
+          </select>
+          <select class="form-control" id="inv-filter-status" onchange="renderInvoicesPage()" style="width:auto;min-width:130px">
+            <option value="">All Status</option>
+          </select>
+        </div>
+        <div class="stat-row" id="inv-stat-row" style="margin-bottom:20px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Invoice ID</th>
+                <th>Date</th>
+                <th>Patient Name</th>
+                <th>Products</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="invoices-tbody"></tbody>
           </table>
         </div>
       </div>
@@ -824,6 +865,46 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-add-product')">Cancel</button>
       <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Invoice Modal -->
+<div class="modal-overlay" id="modal-invoice">
+  <div class="modal">
+    <div class="modal-title" id="inv-modal-title">Add Invoice</div>
+    <input type="hidden" id="mi-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Invoice ID</label>
+        <input class="form-control" id="mi-invoice-id" placeholder="e.g. INV-1042">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-control" type="date" id="mi-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Patient Name</label>
+      <input class="form-control" id="mi-patient">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Products</label>
+      <textarea class="form-control" id="mi-products" placeholder="Products sold..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Amount (PKR)</label>
+        <input class="form-control" type="number" id="mi-amount" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="mi-status"></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invoice')">Cancel</button>
+      <button class="btn btn-primary" id="mi-save" onclick="saveInvoice()">Add Invoice</button>
     </div>
   </div>
 </div>
@@ -1072,6 +1153,7 @@ function showPage(name) {
   if (name === 'billing') renderBilling();
   if (name === 'stock') renderStock();
   if (name === 'analytics') renderAnalytics();
+  if (name === 'invoices') renderInvoices();
 }
 
 // ═══ HOME PAGE ════════════════════════════════════════════
@@ -1559,6 +1641,181 @@ function renderAnalytics() {
 
 }
 
+// ═══ INVOICES PAGE ════════════════════════════════════════
+// Patient invoices live in Supabase `hcloud_invoices` (date + status are text columns)
+
+// Normalise whatever date text the import used into YYYY-MM-DD ('' if unparseable)
+function invDateISO(s) {
+  s = String(s || '').trim();
+  let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  if ((m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/))) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const d = new Date(s);
+  if (isNaN(d)) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+const invStatusKey = s => String(s || '').trim().toLowerCase();
+
+function mapInvoice(r) {
+  return { id: r.id, invoiceId: r.invoice_id || '', date: invDateISO(r.date), patientName: r.patient_name || '',
+    products: r.products || '', amount: Number(r.amount) || 0, status: invStatusKey(r.status) || 'unpaid' };
+}
+
+async function loadInvoices() {
+  try {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from('hcloud_invoices').select('*').range(from, from + 999);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < 1000) break;
+    }
+    DB.invoices = rows.map(mapInvoice);
+    saveData(DB);
+    return true;
+  } catch(e) { console.error('Invoices load error', e); }
+  return false;
+}
+
+function invMonthLabel(ym) {
+  const [y, m] = ym.split('-');
+  return new Date(+y, +m - 1, 1).toLocaleDateString('en-PK', { month: 'long', year: 'numeric' });
+}
+
+function renderInvoices() {
+  const invoices = DB.invoices || [];
+  const monthSel = document.getElementById('inv-filter-month');
+  const statusSel = document.getElementById('inv-filter-status');
+  const curMonth = monthSel.value, curStatus = statusSel.value;
+  const months = [...new Set(invoices.map(i => i.date.slice(0,7)).filter(Boolean))].sort().reverse();
+  monthSel.innerHTML = '<option value="">All Months</option>' +
+    months.map(m => `<option value="${m}"${m===curMonth?' selected':''}>${invMonthLabel(m)}</option>`).join('');
+  const statuses = [...new Set(['paid', 'unpaid', ...invoices.map(i => i.status)])];
+  statusSel.innerHTML = '<option value="">All Status</option>' +
+    statuses.map(s => `<option value="${esc(s)}"${s===curStatus?' selected':''}>${esc(s.charAt(0).toUpperCase() + s.slice(1))}</option>`).join('');
+  renderInvoicesPage();
+}
+
+function renderInvoicesPage() {
+  const month = document.getElementById('inv-filter-month').value;
+  const status = document.getElementById('inv-filter-status').value;
+  // Stat strip follows the month filter; the table also follows status
+  const inMonth = (DB.invoices || []).filter(i => !month || i.date.startsWith(month));
+  const rows = inMonth.filter(i => !status || i.status === status)
+    .sort((a,b) => b.date.localeCompare(a.date) || String(b.invoiceId).localeCompare(String(a.invoiceId), undefined, { numeric: true }));
+
+  const sum = list => list.reduce((s,i) => s + i.amount, 0);
+  const paid = inMonth.filter(i => i.status === 'paid');
+  const unpaid = inMonth.filter(i => i.status === 'unpaid');
+  const unpriced = inMonth.filter(i => !i.amount).length;
+  document.getElementById('inv-stat-row').innerHTML = `
+    <div class="stat-tile">
+      <div class="tile-label">Total Invoices</div>
+      <div class="tile-val">${inMonth.length.toLocaleString()}</div>
+      <div class="tile-meta">${month ? invMonthLabel(month) : 'All months'}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Total Revenue</div>
+      <div class="tile-val">${fmtShort(sum(inMonth))}</div>
+      <div class="tile-meta">${unpriced ? `${unpriced} without amount` : 'All amounts entered'}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Paid</div>
+      <div class="tile-val profit">${fmtShort(sum(paid))}</div>
+      <div class="tile-meta">${paid.length} invoices</div>
+    </div>
+    <div class="stat-tile">
+      <div class="tile-label">Unpaid</div>
+      <div class="tile-val danger">${fmtShort(sum(unpaid))}</div>
+      <div class="tile-meta">${unpaid.length} invoices</div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('invoices-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📄</div><div class="es-title">No invoices found</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(i => `<tr>
+      <td class="td-mono fw-600">${esc(i.invoiceId) || '—'}</td>
+      <td class="td-mono" style="white-space:nowrap">${fmtDate(i.date)}</td>
+      <td>${esc(i.patientName) || '—'}</td>
+      <td style="max-width:260px;word-break:break-word">${esc(i.products) || '—'}</td>
+      <td class="td-mono">${i.amount ? `<div class="fw-600">${fmt(i.amount)}</div>` : '<span style="color:var(--fg3)">PKR 0</span>'}</td>
+      <td><span class="status-badge ${i.status}">${i.status === 'paid' ? '✓ Paid' : i.status === 'unpaid' ? '⏳ Unpaid' : esc(i.status)}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-sm btn-ghost" onclick="openInvoiceModal('${i.id}')" title="Edit">✏️</button>
+          <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);background:transparent" onclick="deleteInvoice('${i.id}')" title="Delete">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openInvoiceModal(id) {
+  const inv = id ? (DB.invoices || []).find(i => i.id === id) : null;
+  if (id && !inv) return;
+  const statuses = [...new Set(['unpaid', 'paid', ...(inv ? [inv.status] : [])])];
+  document.getElementById('mi-status').innerHTML =
+    statuses.map(s => `<option value="${esc(s)}">${esc(s.charAt(0).toUpperCase() + s.slice(1))}</option>`).join('');
+  document.getElementById('inv-modal-title').textContent = inv ? 'Edit Invoice' : 'Add Invoice';
+  document.getElementById('mi-save').textContent = inv ? 'Save Changes' : 'Add Invoice';
+  document.getElementById('mi-id').value = inv ? inv.id : '';
+  document.getElementById('mi-invoice-id').value = inv ? inv.invoiceId : '';
+  document.getElementById('mi-date').value = inv ? inv.date : new Date().toISOString().slice(0,10);
+  document.getElementById('mi-patient').value = inv ? inv.patientName : '';
+  document.getElementById('mi-products').value = inv ? inv.products : '';
+  document.getElementById('mi-amount').value = inv && inv.amount ? inv.amount : '';
+  document.getElementById('mi-status').value = inv ? inv.status : 'unpaid';
+  openModal('modal-invoice');
+  // Editing is mostly filling in amounts, so start there
+  if (inv) setTimeout(() => document.getElementById('mi-amount').focus(), 50);
+}
+
+async function saveInvoice() {
+  const id = document.getElementById('mi-id').value;
+  const row = {
+    invoiceId:   document.getElementById('mi-invoice-id').value.trim(),
+    date:        document.getElementById('mi-date').value,
+    patientName: document.getElementById('mi-patient').value.trim(),
+    products:    document.getElementById('mi-products').value.trim(),
+    amount:      parseFloat(document.getElementById('mi-amount').value) || 0,
+    status:      document.getElementById('mi-status').value,
+  };
+  if (!row.invoiceId) return alert('Enter an invoice ID');
+  if (!row.date) return alert('Pick a date');
+  if (row.amount < 0) return alert('Amount cannot be negative');
+  const cols = { invoice_id: row.invoiceId, date: row.date, patient_name: row.patientName,
+    products: row.products, amount: row.amount, status: row.status };
+  const newId = id || uid();
+  if (SB_READY) {
+    const { error } = id
+      ? await sb.from('hcloud_invoices').update(cols).eq('id', id)
+      : await sb.from('hcloud_invoices').insert({ id: newId, ...cols });
+    if (error) { showToast('Save failed', 'err'); return; }
+  }
+  DB.invoices = DB.invoices || [];
+  if (id) Object.assign(DB.invoices.find(i => i.id === id), row);
+  else DB.invoices.push({ id: newId, ...row });
+  saveData(DB);
+  closeModal('modal-invoice');
+  renderInvoices();
+  showToast(id ? 'Invoice updated ✓' : 'Invoice added ✓');
+}
+
+async function deleteInvoice(id) {
+  const inv = (DB.invoices || []).find(i => i.id === id);
+  if (!inv || !confirm(`Delete invoice ${inv.invoiceId || ''}? This cannot be undone.`)) return;
+  if (SB_READY) {
+    const { error } = await sb.from('hcloud_invoices').delete().eq('id', id);
+    if (error) { showToast('Delete failed', 'err'); return; }
+  }
+  DB.invoices = DB.invoices.filter(i => i.id !== id);
+  saveData(DB);
+  renderInvoices();
+  showToast('Invoice deleted');
+}
+
 // ═══ MODALS ════════════════════════════════════════════════
 
 function openAddPharmaModal() {
@@ -1759,5 +2016,7 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
     else if (cur === 'analytics') renderAnalytics();
     showToast('Connected to Supabase ✓');
   }
+  // Invoices load separately so a problem there never blocks the pharma data
+  if (ok && await loadInvoices() && document.querySelector('.nav-item.active')?.dataset.page === 'invoices') renderInvoices();
 })();
 </script>
