@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Revive Pharma</title>
@@ -431,8 +432,38 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .empty-state .es-sub { font-size: 13px; }
 
 /* ─── RESPONSIVE ─────────────────────────────────────────── */
+/* ─── LOGIN ──────────────────────────────────────────────── */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--nav-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.login-screen[hidden] { display: none; }
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 28px 28px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+}
+.login-card svg { width: 64px; margin: 0 auto 8px; display: block; }
+.login-card .logo-mark { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 16px; color: var(--fg); letter-spacing: 4px; text-align: center; }
+.login-card .logo-sub { font-size: 10px; color: var(--fg3); margin: 2px 0 24px; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; }
+.login-error { min-height: 18px; font-size: 12px; font-weight: 600; color: var(--danger); margin: -4px 0 10px; }
+.nav-signout { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
+.nav-signout .nav-user { font-size: 11px; color: var(--nav-fg); padding: 0 20px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (max-width: 700px) {
   .app-shell { flex-direction: column; }
+  .nav-signout { margin-top: 0; border-top: none; padding-top: 0; display: flex; align-items: center; }
+  .nav-signout .nav-user { display: none; }
   .sidebar { width: 100%; height: auto; position: static; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
   .sidebar-logo { display: none; }
   .nav-section { display: none; }
@@ -517,6 +548,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <button class="nav-item" data-page="analytics" onclick="showPage('analytics')">
       <span class="nav-icon">📊</span> Analytics
     </button>
+    <div class="nav-signout">
+      <div class="nav-user" id="nav-user"></div>
+      <button class="nav-item" onclick="signOut()">
+        <span class="nav-icon">↩</span> Sign out
+      </button>
+    </div>
   </nav>
 
   <!-- MAIN -->
@@ -692,6 +729,25 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 <footer style="background:var(--surface);border-top:1px solid var(--border);padding:12px 28px;text-align:center;font-size:11px;color:var(--fg3);letter-spacing:0.3px">
   Powered by <strong style="color:var(--accent)">CyberHealth Solutions</strong> &nbsp;|&nbsp; Made by <strong style="color:var(--fg2)">Meesum Mir</strong>
 </footer>
+
+<!-- LOGIN (shown until a Supabase session exists) -->
+<div class="login-screen" id="login-screen" hidden>
+  <form class="login-card" onsubmit="signIn(event)">
+    <div id="login-logo"></div>
+    <div class="logo-mark">REVIVE</div>
+    <div class="logo-sub">Pharma System</div>
+    <div class="form-group">
+      <label class="form-label" for="login-email">Email</label>
+      <input class="form-control" type="email" id="login-email" autocomplete="username" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="login-password">Password</label>
+      <input class="form-control" type="password" id="login-password" autocomplete="current-password" required>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" type="submit" id="login-btn" style="width:100%;justify-content:center">Sign in</button>
+  </form>
+</div>
 
 <!-- ═══ MODALS ════════════════════════════════════════════ -->
 
@@ -2001,8 +2057,62 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
+// ═══ AUTH ══════════════════════════════════════════════════
+// Tables only allow the `authenticated` role, so nothing loads until sign-in.
+// Accounts are created in Supabase → Authentication → Users (sign-ups are off).
+
+function showLogin() {
+  const logo = document.getElementById('login-logo');
+  if (!logo.firstChild) {
+    // Reuse the sidebar logo; rename its gradient id so the two copies don't clash
+    const svg = document.querySelector('.sidebar-logo svg').cloneNode(true);
+    svg.innerHTML = svg.innerHTML.replace(/id="gold"/g, 'id="gold-login"').replace(/url\(#gold\)/g, 'url(#gold-login)');
+    svg.removeAttribute('style');
+    logo.appendChild(svg);
+  }
+  document.getElementById('login-screen').hidden = false;
+  setTimeout(() => document.getElementById('login-email').focus(), 50);
+}
+
+async function signIn(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: document.getElementById('login-email').value.trim(),
+    password: document.getElementById('login-password').value,
+  });
+  btn.disabled = false; btn.textContent = 'Sign in';
+  if (error) {
+    errEl.textContent = /invalid/i.test(error.message) ? 'Wrong email or password' : error.message;
+    return;
+  }
+  document.getElementById('login-password').value = '';
+  startApp(data.session);
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  // Don't leave patient or billing data cached on this device
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  location.reload();
+}
+
 // ═══ INIT ══════════════════════════════════════════════════
 (async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) startApp(session); else showLogin();
+  // Signed out elsewhere (another tab, expired refresh token) → back to login
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} location.reload(); }
+  });
+})();
+
+async function startApp(session) {
+  document.getElementById('login-screen').hidden = true;
+  document.getElementById('nav-user').textContent = session.user.email || '';
   // Try Supabase first, fall back to localStorage/defaults
   loadLocalFallback(); // show something instantly
   renderHome();
@@ -2018,5 +2128,5 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
   }
   // Invoices load separately so a problem there never blocks the pharma data
   if (ok && await loadInvoices() && document.querySelector('.nav-item.active')?.dataset.page === 'invoices') renderInvoices();
-})();
+}
 </script>

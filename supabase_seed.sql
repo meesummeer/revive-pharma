@@ -92,11 +92,11 @@ insert into products (id, pharma_id, name, qty, total, low_at, date_added) value
   ('p18', 'gns',      'Acnoaie Face Wash',            10,  10, 3, '2026-10-22'),
   ('p19', 'gns',      'Retegin Body Sol',              5,   5, 2, '2026-10-22');
 
--- Enable RLS + allow anon reads/writes (so the app can talk to Supabase)
+-- Enable RLS + allow signed-in users only (the app requires login; sign-ups are disabled)
 alter table pharmas enable row level security;
 alter table bills enable row level security;
 alter table products enable row level security;
 
-create policy "anon_all_pharmas"  on pharmas  for all to anon using (true) with check (true);
-create policy "anon_all_bills"    on bills     for all to anon using (true) with check (true);
-create policy "anon_all_products" on products  for all to anon using (true) with check (true);
+create policy "auth_all_pharmas" on pharmas for all to authenticated using (true) with check (true);
+create policy "auth_all_bills" on bills for all to authenticated using (true) with check (true);
+create policy "auth_all_products" on products for all to authenticated using (true) with check (true);
