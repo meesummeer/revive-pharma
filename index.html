@@ -280,6 +280,13 @@ tbody tr:hover td { background: var(--surface2); }
 .status-badge.low { background: var(--danger-bg); color: var(--low-stock); }
 .status-badge.ok { background: var(--success-bg); color: var(--success); }
 
+/* ─── BILL ITEM LIST ─────────────────────────────────────── */
+.bill-items { list-style: none; margin: 0; padding: 0; min-width: 240px; max-width: 320px; }
+.bill-items li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.bill-items li:first-child { padding-top: 0; }
+.bill-items li:last-child { padding-bottom: 0; border-bottom: none; }
+.bill-items .qty { flex-shrink: 0; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg2); }
+
 /* ─── BUTTONS ────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
@@ -1387,6 +1394,21 @@ function renderBillHeaderCards() {
 
 const billStatusLabel = s => s === 'paid' ? '✓ Paid' : s === 'due-now' ? '⚠ Due Now' : '⏳ Unpaid';
 
+// Shows "Name ×5, Name ×3" as one row per product with its quantity.
+// Text with no quantities (a plain note) stays as written.
+function billDescHtml(desc) {
+  const parts = (desc || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  if (!parts.length) return '—';
+  const items = parts.map(p => {
+    const m = p.match(/^(.+?)(?:\s*×\s*|\s+[xX]\s*)(\d+)$/);
+    return m ? { name: m[1], qty: m[2] } : { name: p, qty: '' };
+  });
+  if (!items.some(i => i.qty)) return `<div style="max-width:220px;word-break:break-word;white-space:pre-line">${esc(desc)}</div>`;
+  return `<ul class="bill-items">${items.map(i =>
+    `<li><span>${esc(i.name)}</span>${i.qty ? `<span class="qty">×${i.qty}</span>` : ''}</li>`
+  ).join('')}</ul>`;
+}
+
 function renderBillsTable() {
   const pharmaFilter = document.getElementById('bill-filter-pharma').value;
   const statusFilter = document.getElementById('bill-filter-status').value;
@@ -1412,7 +1434,7 @@ function renderBillsTable() {
       <td class="td-mono">${b.tp ? `<div class="fw-600">${fmt(b.tp)}</div>` : '<span style="color:var(--fg3)">—</span>'}</td>
       <td class="td-mono" style="color:var(--accent);font-size:12px">${b.tp > 0 ? parseFloat(((1-b.amount/b.tp)*100).toFixed(1))+'%' : '—'}</td>
       <td class="td-mono"><div class="fw-600">${fmt(b.amount)}</div></td>
-      <td style="max-width:220px;word-break:break-word">${esc(b.desc||b.description||'—')}</td>
+      <td>${billDescHtml(b.desc||b.description)}</td>
       <td><span class="status-badge ${b.status}">${billStatusLabel(b.status)}</span></td>
       <td>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
