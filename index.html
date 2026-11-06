@@ -32,6 +32,9 @@
   --success-bg: #f0fdf4;
   --paid: #16a34a;
   --unpaid: #dc2626;
+  --due-now: #ca8a04;
+  --due-now-bg: #fef08a;
+  --due-now-fg: #854d0e;
   --low-stock: #dc2626;
   --nav-bg: #111827;
   --nav-fg: #9ca3af;
@@ -273,6 +276,7 @@ tbody tr:hover td { background: var(--surface2); }
 }
 .status-badge.paid { background: var(--success-bg); color: var(--paid); }
 .status-badge.unpaid { background: var(--danger-bg); color: var(--unpaid); }
+.status-badge.due-now { background: var(--due-now-bg); color: var(--due-now-fg); }
 .status-badge.low { background: var(--danger-bg); color: var(--low-stock); }
 .status-badge.ok { background: var(--success-bg); color: var(--success); }
 
@@ -370,6 +374,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .bhc-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; font-family: 'Inter', sans-serif; margin-top: 4px; }
 .bhc-val.red { color: var(--danger); }
 .bhc-val.green { color: var(--success); }
+.bhc-val.yellow { color: var(--due-now); }
 
 /* ─── STOCK PAGE ─────────────────────────────────────────── */
 .stock-grid {
@@ -626,6 +631,7 @@ tbody tr.row-selected td { background: var(--accent-light); }
           <select class="form-control" id="bill-filter-status" onchange="renderBillsTable()" style="width:auto;min-width:130px">
             <option value="">All Status</option>
             <option value="unpaid">Unpaid</option>
+            <option value="due-now">Due Now</option>
             <option value="paid">Paid</option>
           </select>
         </div>
@@ -848,6 +854,7 @@ tbody tr.row-selected td { background: var(--accent-light); }
       <label class="form-label">Status</label>
       <select class="form-control" id="mb-status">
         <option value="unpaid">Unpaid</option>
+        <option value="due-now">Due Now</option>
         <option value="paid">Paid</option>
       </select>
     </div>
@@ -895,6 +902,7 @@ tbody tr.row-selected td { background: var(--accent-light); }
       <label class="form-label">Status</label>
       <select class="form-input" id="eb-status">
         <option value="unpaid">Unpaid</option>
+        <option value="due-now">Due Now</option>
         <option value="paid">Paid</option>
       </select>
     </div>
@@ -1212,7 +1220,7 @@ function pharmaStats(pharmaId) {
   // amount = what we actually pay (net payable from invoice)
   const totalPayable = bills.reduce((s,b) => s + b.amount, 0);
   const totalPaid    = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
-  const totalPending = bills.filter(b => b.status === 'unpaid').reduce((s,b) => s + b.amount, 0);
+  const totalPending = bills.filter(b => b.status !== 'paid').reduce((s,b) => s + b.amount, 0);
   return { totalPayable, totalPaid, totalPending };
 }
 
@@ -1224,7 +1232,7 @@ function allStats() {
     totalPaid += s.totalPaid;
     totalPending += s.totalPending;
     const paidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'paid');
-    const unpaidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status === 'unpaid');
+    const unpaidBills = DB.bills.filter(b => b.pharmaId === p.id && b.status !== 'paid');
     if (p.type === 'profit') {
       totalProfitEarned += paidBills.reduce((s,b) => s + b.amount * (p.pct/100), 0);
       totalProfitPending += unpaidBills.reduce((s,b) => s + b.amount * (p.pct/100), 0);
@@ -1338,16 +1346,17 @@ function renderBilling() {
 }
 
 function renderBillHeaderCards() {
-  let totalAll=0, totalPaid=0, totalPending=0;
+  let totalAll=0, totalPaid=0, totalPending=0, totalDueNow=0;
   DB.bills.forEach(b => {
     totalAll += b.amount;
+    if (b.status === 'due-now') totalDueNow += b.amount;
     if (b.status === 'paid') totalPaid += b.amount;
     else totalPending += b.amount;
   });
 
   let perPharmaHTML = '';
   DB.pharmas.forEach(p => {
-    const pending = getBillsFor(p.id).filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    const pending = getBillsFor(p.id).filter(b=>b.status!=='paid').reduce((s,b)=>s+b.amount,0);
     if (pending > 0) perPharmaHTML += `
       <div class="bill-header-card">
         <div class="bhc-label">${esc(p.name)} Pending</div>
@@ -1361,6 +1370,10 @@ function renderBillHeaderCards() {
       <div class="bhc-val red">${fmt(totalPending)}</div>
     </div>
     <div class="bill-header-card">
+      <div class="bhc-label">Due Now</div>
+      <div class="bhc-val yellow">${fmt(totalDueNow)}</div>
+    </div>
+    <div class="bill-header-card">
       <div class="bhc-label">Total Paid</div>
       <div class="bhc-val green">${fmt(totalPaid)}</div>
     </div>
@@ -1371,6 +1384,8 @@ function renderBillHeaderCards() {
     ${perPharmaHTML}
   `;
 }
+
+const billStatusLabel = s => s === 'paid' ? '✓ Paid' : s === 'due-now' ? '⚠ Due Now' : '⏳ Unpaid';
 
 function renderBillsTable() {
   const pharmaFilter = document.getElementById('bill-filter-pharma').value;
@@ -1398,10 +1413,10 @@ function renderBillsTable() {
       <td class="td-mono" style="color:var(--accent);font-size:12px">${b.tp > 0 ? parseFloat(((1-b.amount/b.tp)*100).toFixed(1))+'%' : '—'}</td>
       <td class="td-mono"><div class="fw-600">${fmt(b.amount)}</div></td>
       <td style="max-width:220px;word-break:break-word">${esc(b.desc||b.description||'—')}</td>
-      <td><span class="status-badge ${b.status}">${b.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}</span></td>
+      <td><span class="status-badge ${b.status}">${billStatusLabel(b.status)}</span></td>
       <td>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          ${b.status === 'unpaid'
+          ${b.status !== 'paid'
             ? `<button class="btn btn-sm btn-primary" onclick="markPaid('${b.id}')">Mark Paid</button>`
             : `<button class="btn btn-sm btn-ghost" onclick="markUnpaid('${b.id}')">Mark Unpaid</button>`
           }
@@ -1416,10 +1431,11 @@ function renderBillsTable() {
 async function markPaid(id) {
   const b = DB.bills.find(b => b.id === id);
   if (!b) return;
+  const prev = b.status;
   b.status = 'paid';
   if (SB_READY) {
     const { error } = await sb.from('bills').update({ status: 'paid' }).eq('id', id);
-    if (error) { showToast('Save failed', 'err'); b.status = 'unpaid'; renderBilling(); return; }
+    if (error) { showToast('Save failed', 'err'); b.status = prev; renderBilling(); return; }
   }
   saveData(DB); renderBilling(); showToast('Marked paid ✓');
 }
@@ -1491,20 +1507,23 @@ async function saveEditBill() {
   const id = document.getElementById('eb-id').value;
   const b = DB.bills.find(b => b.id === id);
   if (!b) return;
-  b.pharmaId = document.getElementById('eb-pharma').value;
-  b.billNo   = document.getElementById('eb-billno').value.trim();
-  b.date     = document.getElementById('eb-date').value;
-  b.tp       = parseFloat(document.getElementById('eb-tp').value) || 0;
-  b.amount   = parseFloat(document.getElementById('eb-amount').value) || 0;
-  b.status   = document.getElementById('eb-status').value;
-  b.desc     = document.getElementById('eb-desc').value.trim();
+  const upd = {
+    pharmaId: document.getElementById('eb-pharma').value,
+    billNo:   document.getElementById('eb-billno').value.trim(),
+    date:     document.getElementById('eb-date').value,
+    tp:       parseFloat(document.getElementById('eb-tp').value) || 0,
+    amount:   parseFloat(document.getElementById('eb-amount').value) || 0,
+    status:   document.getElementById('eb-status').value,
+    desc:     document.getElementById('eb-desc').value.trim(),
+  };
   if (SB_READY) {
     const { error } = await sb.from('bills').update({
-      pharma_id: b.pharmaId, bill_no: b.billNo, date: b.date,
-      amount: b.amount, tp: b.tp, status: b.status, description: b.desc
+      pharma_id: upd.pharmaId, bill_no: upd.billNo, date: upd.date,
+      amount: upd.amount, tp: upd.tp, status: upd.status, description: upd.desc
     }).eq('id', id);
     if (error) { showToast('Save failed', 'err'); return; }
   }
+  Object.assign(b, upd);
   saveData(DB);
   closeModal('modal-edit-bill');
   renderBilling();
@@ -1633,13 +1652,13 @@ function renderAnalytics() {
 
   const totalBilled = bills.reduce((s,b)=>s+b.amount,0);
   const totalPaid = bills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
-  const totalPending = bills.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+  const totalPending = bills.filter(b=>b.status!=='paid').reduce((s,b)=>s+b.amount,0);
 
   let profitEarned=0, profitPending=0;
   pharmas.forEach(p => {
     const pb = DB.bills.filter(b => b.pharmaId === p.id);
     const paid = pb.filter(b=>b.status==='paid');
-    const pend = pb.filter(b=>b.status==='unpaid');
+    const pend = pb.filter(b=>b.status!=='paid');
     if (p.type === 'profit') {
       profitEarned += paid.reduce((s,b)=>s+b.amount*(p.pct/100),0);
       profitPending += pend.reduce((s,b)=>s+b.amount*(p.pct/100),0);
@@ -1678,7 +1697,7 @@ function renderAnalytics() {
   let accumHTML = '';
   pharmas.forEach(p => {
     const pb = getBillsFor(p.id);
-    const pending = pb.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    const pending = pb.filter(b=>b.status!=='paid').reduce((s,b)=>s+b.amount,0);
     if (pending > 0) {
       accumHTML += `
         <div class="business-bar">
@@ -1699,7 +1718,7 @@ function renderAnalytics() {
   pharmas.forEach(p => {
     const pb = getBillsFor(p.id);
     const paid = pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0);
-    const pend = pb.filter(b=>b.status==='unpaid').reduce((s,b)=>s+b.amount,0);
+    const pend = pb.filter(b=>b.status!=='paid').reduce((s,b)=>s+b.amount,0);
     if (pb.length) {
       bkHTML += `
         <div style="margin-bottom:12px">
@@ -1730,7 +1749,7 @@ function renderAnalytics() {
       <td class="td-mono">${fmtDate(b.date)}</td>
       <td class="td-mono fw-600">${fmt(b.amount)}</td>
       <td><span class="type-badge ${p?.type||'profit'}">${p?.pct||0}%</span></td>
-      <td><span class="status-badge ${b.status}">${b.status==='paid'?'✓ Paid':'⏳ Unpaid'}</span></td>
+      <td><span class="status-badge ${b.status}">${billStatusLabel(b.status)}</span></td>
     </tr>`;
   }).join('');
 

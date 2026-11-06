@@ -29,7 +29,7 @@ create table bills (
   amount      numeric not null,
   tp          numeric default 0,
   description text default '',
-  status      text not null default 'unpaid' check (status in ('paid','unpaid')),
+  status      text not null default 'unpaid' check (status in ('paid','unpaid','due-now')),
   created_at  timestamptz default now()
 );
 
